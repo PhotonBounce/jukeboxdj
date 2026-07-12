@@ -1,7 +1,7 @@
 /* JukeboxDJ service worker — offline app shell.
    Rules (see repo CLAUDE.md): precache with cache:"reload" so the SW never
    snapshots a stale server-cached file, and bump CACHE on every release. */
-var CACHE = "jukeboxdj-v7";
+var CACHE = "jukeboxdj-v8";
 var ASSETS = [
   "./",
   "index.html",

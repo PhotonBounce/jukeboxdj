@@ -519,3 +519,26 @@ body.beating .btn-play.on,body.beating #btn-full-auto.on{
   .deck-water,.deck-notes .note,#eq-hi-a,#eq-mid-a,#eq-lo-a,#eq-hi-b,#eq-mid-b,#eq-lo-b,#btn-full-auto.on .fa-icon{animation:none!important}
   .deck-notes{transform:none}
 }
+
+/* ═══════════════════ hot cues ═══════════════════ */
+.hotcues{display:flex;align-items:center;gap:7px;margin-top:2px;position:relative;z-index:3;flex-wrap:wrap}
+.hc-label{font-size:9px;font-weight:800;letter-spacing:.14em;color:var(--faint)}
+.hc-pad{width:40px;height:36px;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;
+  border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--faint);transition:all .13s}
+.hc-pad:hover{border-color:var(--border-lt);color:var(--muted)}
+.hc-pad:active{transform:scale(.92)}
+.hc-pad.set{background:linear-gradient(135deg,rgba(245,200,66,.28),rgba(251,113,133,.2));
+  border-color:var(--gold);color:#FFE9A3;box-shadow:0 0 12px rgba(245,200,66,.4)}
+.deck-b .hc-pad.set{background:linear-gradient(135deg,rgba(125,211,252,.28),rgba(94,234,212,.2));
+  border-color:var(--teal);color:#CFF6FF;box-shadow:0 0 12px rgba(125,211,252,.4)}
+
+/* ═══════════════════ musical key / Camelot badge ═══════════════════ */
+.deck-key{flex:none;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--faint);
+  border:1px solid var(--border);border-radius:7px;padding:3px 8px;font-variant-numeric:tabular-nums;
+  min-width:34px;text-align:center;transition:all .2s}
+.deck-key.known{color:var(--iris-lt);border-color:var(--border-lt)}
+.deck-key.harmonic{color:#04120f;background:var(--aurora);border-color:var(--aurora);
+  box-shadow:0 0 12px rgba(94,234,212,.5)}
+.deck-key.harmonic::after{content:" ✓ in key";font-size:9px;font-weight:800}
+.lib-key{font-size:11px;font-weight:800;color:var(--aurora);width:38px;text-align:right;
+  font-variant-numeric:tabular-nums;opacity:.85}

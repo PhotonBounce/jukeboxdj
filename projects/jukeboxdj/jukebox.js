@@ -51,6 +51,7 @@ class Deck {
     this.pos = 0; this.vel = 0;       // mirrored from worklet
     this._seekId = 0;                 // monotonic seek id — see onmessage/seek()
     this.cue = 0;
+    this.hotcues = [null, null, null, null];   // 4 recallable jump points
     this.rate = 1;
     this.loopBeats = 0;
     this.peaks = null;
@@ -102,6 +103,7 @@ class Deck {
     const r = (b.numberOfChannels > 1 ? b.getChannelData(1) : b.getChannelData(0)).slice();
     this.node.port.postMessage({ t: "load", l, r, len: b.length, sr: b.sampleRate }, [l.buffer, r.buffer]);
     this.playing = false; this.pos = 0; this.vel = 0; this.cue = 0; this.loopBeats = 0;
+    this.hotcues = [null, null, null, null];
     if (track.bpm) this.delay.delayTime.value = (60 / track.bpm) * 0.75;
     this.peaks = computePeaks(b, 640);
   }
@@ -121,6 +123,13 @@ class Deck {
     this.node.port.postMessage({ t: "play", on: false });
     this.seek(this.cue);
   }
+  setHotcue (i) { if (this.track) this.hotcues[i] = this.pos; }
+  jumpHotcue (i) {
+    if (!this.track || this.hotcues[i] == null) return;
+    this.seek(this.hotcues[i]);
+    if (!this.playing) this.togglePlay();
+  }
+  clearHotcue (i) { this.hotcues[i] = null; }
   seek (frames) {
     this.pos = frames;
     this._seekId++;   // stamp this seek so stale worklet pos echoes are ignored
@@ -603,14 +612,20 @@ function driveMixerBeat () {
 /* ─────────── auto-restart · random load · FULL AUTO DJ · share ─────────── */
 let lastMixBlob = null;   // most recent recording, kept for the Share button
 
-function randomTrack (exclude) {
-  const pool = library.filter((t) => t && t.buffer && t !== exclude);
+function randomTrack (exclude, harmonicWith) {
+  let pool = library.filter((t) => t && t.buffer && t !== exclude);
   if (!pool.length) return null;
+  // harmonic mixing: when we know the live track's key, prefer records that are
+  // in a compatible key (uses only already-computed keys so it never blocks).
+  if (harmonicWith && harmonicWith.key) {
+    const compat = pool.filter((t) => t.key && keysCompatible(harmonicWith.key.camelot, t.key.camelot));
+    if (compat.length) pool = compat;
+  }
   return pool[Math.floor(Math.random() * pool.length)];
 }
-async function loadRandomToDeck (id) {
+async function loadRandomToDeck (id, harmonicWith) {
   const other = decks[id === "A" ? "B" : "A"].track;
-  const t = randomTrack(other);
+  const t = randomTrack(other, harmonicWith);
   if (t) await loadToDeck(id, t);
   return t;
 }
@@ -633,7 +648,7 @@ async function fullAutoTick () {
   if (window.JBAutoMix && window.JBAutoMix.isRunning()) return;   // never overlap a running mix
   const inc = crossPos < 0.5 ? "B" : "A";                         // bring the new record in on the quiet deck
   const live = inc === "A" ? "B" : "A";
-  await loadRandomToDeck(inc);
+  await loadRandomToDeck(inc, decks[live].track);                 // prefer a harmonic (in-key) match
   if (decks[live].track && !decks[live].playing) { decks[live].togglePlay(); ui.deckPlayChanged(live); }
   if (window.JBAutoMix) await window.JBAutoMix.play(window.JBAutoMix.smartPick());
 }
@@ -691,6 +706,144 @@ function setupShare () {
   });
 }
 
+/* ─────────── hot cues ─────────── */
+function refreshHotcues (id) {
+  const el = deckEls(id), d = decks[id];
+  if (!el.hcPads || !d) return;
+  el.hcPads.forEach((pad, i) => pad.classList.toggle("set", d.hotcues[i] != null));
+}
+function setupHotcues () {
+  ["A", "B"].forEach((id) => {
+    const el = deckEls(id);
+    el.hcPads.forEach((pad, i) => {
+      pad.addEventListener("click", async () => {
+        await ensureAudio();                 // creates the decks on first gesture
+        const d = decks[id];
+        if (!d) return;
+        if (d.hotcues[i] == null) d.setHotcue(i); else d.jumpHotcue(i);   // empty=set, set=jump
+        refreshHotcues(id); ui.deckPlayChanged(id);
+      });
+      pad.addEventListener("contextmenu", (e) => { e.preventDefault(); const d = decks[id]; if (d) { d.clearHotcue(i); refreshHotcues(id); } });
+    });
+  });
+}
+
+/* ─────────── musical-key detection (Krumhansl chroma) + Camelot wheel ─────────── */
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const CAMELOT_MAJ = [8, 3, 10, 5, 12, 7, 2, 9, 4, 11, 6, 1];   // by pitch class C..B
+const CAMELOT_MIN = [5, 12, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10];
+function camelotOf (root, mode) { return (mode === "minor" ? CAMELOT_MIN[root] + "A" : CAMELOT_MAJ[root] + "B"); }
+function keysCompatible (a, b) {
+  if (!a || !b) return false;
+  const na = +a.slice(0, -1), la = a.slice(-1), nb = +b.slice(0, -1), lb = b.slice(-1);
+  if (na === nb) return true;                          // same code, or relative major/minor
+  const d = Math.abs(na - nb);
+  return la === lb && (d === 1 || d === 11);           // one step around the wheel, same mode
+}
+function estimateKey (buffer) {
+  const sr = buffer.sampleRate;
+  const c0 = buffer.getChannelData(0);
+  const c1 = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : c0;
+  const step = Math.max(1, Math.round(sr / 11025));
+  const dsr = sr / step;
+  const N = Math.min(Math.floor(c0.length / step), Math.floor(dsr * 45));   // cap ~45s
+  const sig = new Float32Array(N);
+  for (let j = 0, i = 0; j < N; j++, i += step) sig[j] = (c0[i] + c1[i]) * 0.5;
+  const chroma = new Float64Array(12);
+  for (let m = 36; m <= 84; m++) {                     // Goertzel at each semitone C2..C6
+    const f = 440 * Math.pow(2, (m - 69) / 12);
+    const k = 2 * Math.cos(2 * Math.PI * f / dsr);
+    let s1 = 0, s2 = 0;
+    for (let i = 0; i < N; i++) { const s0 = sig[i] + k * s1 - s2; s2 = s1; s1 = s0; }
+    chroma[m % 12] += s1 * s1 + s2 * s2 - k * s1 * s2;
+  }
+  let mx = 0; for (let i = 0; i < 12; i++) mx = Math.max(mx, chroma[i]);
+  if (mx > 0) for (let i = 0; i < 12; i++) chroma[i] /= mx;
+  const MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const MIN = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  let best = { score: -1, root: 0, mode: "major" };
+  for (let r = 0; r < 12; r++) {
+    let sMaj = 0, sMin = 0;
+    for (let i = 0; i < 12; i++) { const c = chroma[(i + r) % 12]; sMaj += c * MAJ[i]; sMin += c * MIN[i]; }
+    if (sMaj > best.score) best = { score: sMaj, root: r, mode: "major" };
+    if (sMin > best.score) best = { score: sMin, root: r, mode: "minor" };
+  }
+  return { key: NOTE_NAMES[best.root], mode: best.mode,
+    label: NOTE_NAMES[best.root] + (best.mode === "minor" ? "m" : ""), camelot: camelotOf(best.root, best.mode) };
+}
+function trackKey (track) {
+  if (!track) return null;
+  if (!track.key && track.buffer) { try { track.key = estimateKey(track.buffer); } catch (e) { track.key = null; } }
+  return track.key;
+}
+function updateRowKey (track) {
+  if (track && track._row) { const s = $(".lib-key", track._row); if (s) s.textContent = track.key ? track.key.camelot : ""; }
+}
+function refreshDeckKey (id) {
+  const el = deckEls(id), d = decks[id];
+  if (!el.key) return;
+  if (!d) { el.key.textContent = "—"; el.key.classList.remove("harmonic", "known"); return; }
+  const k = d.track ? trackKey(d.track) : null;
+  el.key.textContent = k ? (k.camelot + " · " + k.label) : "—";
+  const other = decks[id === "A" ? "B" : "A"].track;
+  const ok2 = other && k && other.key && keysCompatible(k.camelot, other.key.camelot);
+  el.key.classList.toggle("harmonic", !!ok2);
+  el.key.classList.toggle("known", !!k);
+}
+/* compute keys for the whole library in the background — display + harmonic
+   Auto-Mix get them ready without blocking boot */
+function precomputeKeys () {
+  const queue = library.slice();
+  const step = () => {
+    const t = queue.shift();
+    if (t) { trackKey(t); updateRowKey(t); }
+    if (queue.length) setTimeout(step, 50);
+    else { refreshDeckKey("A"); refreshDeckKey("B"); }
+  };
+  setTimeout(step, 900);
+}
+
+/* ─────────── offline library (IndexedDB) — your added tracks survive reload ─────────── */
+function idbOpen () {
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open("jukeboxdj", 1);
+    rq.onupgradeneeded = () => { if (!rq.result.objectStoreNames.contains("tracks")) rq.result.createObjectStore("tracks", { keyPath: "id" }); };
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function idbSaveTrack (rec) {
+  try {
+    const db = await idbOpen();
+    await new Promise((res, rej) => {
+      const tx = db.transaction("tracks", "readwrite");
+      tx.objectStore("tracks").put(rec);
+      tx.oncomplete = () => res();
+      tx.onerror = tx.onabort = () => rej(tx.error);
+    });
+  } catch (e) { /* no IDB / private mode / quota — the track still plays this session */ }
+}
+async function idbAllTracks () {
+  try {
+    const db = await idbOpen();
+    return await new Promise((res) => { const rq = db.transaction("tracks").objectStore("tracks").getAll(); rq.onsuccess = () => res(rq.result || []); rq.onerror = () => res([]); });
+  } catch (e) { return []; }
+}
+async function loadSavedTracks () {
+  let recs = [];
+  try { recs = await idbAllTracks(); } catch (e) { return; }
+  for (const rec of recs) {
+    try {
+      const audio = await decodeBundled(rec.bytes.slice(0));   // OfflineAudioContext — works before any gesture
+      const track = { id: rec.id, name: rec.name, style: "Your music", bpm: estimateBPM(audio),
+        color: USER_COLORS[userColorIx++ % USER_COLORS.length], buffer: audio, custom: true, saved: true };
+      library.push(track);
+      $("#lib-list").appendChild(libraryRow(track));
+    } catch (e) { /* skip a corrupt record */ }
+  }
+  if (recs.length) $("#lib-status").textContent = recs.length + " saved track" + (recs.length > 1 ? "s" : "") + " restored — ready.";
+}
+
 function setupScratchPads () {
   const host = $("#fx-pads");
   if (!host) return;
@@ -733,7 +886,9 @@ function deckEls (id) {
     title: $(".deck-track", root),
     wave: $(".wave", root),
     loops: $$(".btn-loop", root),
-    vu: $(".vu", root)
+    vu: $(".vu", root),
+    key: $(".deck-key", root),
+    hcPads: $$(".hc-pad", root)
   };
 }
 
@@ -970,6 +1125,7 @@ function libraryRow (track) {
     '<span class="lib-vinyl" style="--c:' + track.color + '"></span>' +
     '<span class="lib-onair"></span>' +
     '<span class="lib-meta"><b>' + escapeHTML(track.name) + "</b><i>" + escapeHTML(track.style) + "</i></span>" +
+    '<span class="lib-key" title="Camelot key">' + (track.key ? track.key.camelot : "") + "</span>" +
     '<span class="lib-bpm">' + (track.bpm ? track.bpm + " BPM" : "— BPM") + "</span>" +
     '<span class="lib-dur">' + fmtTime(track.buffer.duration) + "</span>" +
     '<span class="lib-btns"><button class="to-a" title="Load on deck A">A</button><button class="to-b" title="Load on deck B">B</button></span>';
@@ -1015,7 +1171,10 @@ async function loadToDeck (id, track) {
   el.root.classList.add("loaded");
   el.loops.forEach((x) => x.classList.remove("on"));
   ui.deckPlayChanged(id);
+  refreshHotcues(id);
   drawWave(id);
+  // detect the musical key off the main thread's next tick so the load paints first
+  setTimeout(() => { trackKey(track); updateRowKey(track); refreshDeckKey(id); refreshDeckKey(id === "A" ? "B" : "A"); }, 0);
 }
 
 /* Featured tracks: real songs bundled with the app (projects/jukeboxdj/audio/).
@@ -1089,8 +1248,8 @@ async function addFiles (files) {
     if (!/^audio\//.test(f.type) && !/\.(mp3|wav|ogg|m4a|flac|aac|webm)$/i.test(f.name)) continue;
     status.textContent = "Decoding " + f.name + "…";
     try {
-      const buf = await f.arrayBuffer();
-      const audio = await ctx.decodeAudioData(buf);
+      const raw = await f.arrayBuffer();
+      const audio = await ctx.decodeAudioData(raw.slice(0));   // decode a copy; keep raw for storage
       const track = {
         id: "user-" + Date.now() + Math.random().toString(36).slice(2, 6),
         name: f.name.replace(/\.[^.]+$/, ""),
@@ -1098,10 +1257,13 @@ async function addFiles (files) {
         bpm: estimateBPM(audio),
         color: USER_COLORS[userColorIx++ % USER_COLORS.length],
         buffer: audio,
-        custom: true
+        custom: true,
+        saved: true
       };
       library.push(track);
       $("#lib-list").appendChild(libraryRow(track));
+      await idbSaveTrack({ id: track.id, name: track.name, bytes: raw, type: f.type });   // persist for next time
+      setTimeout(() => { trackKey(track); updateRowKey(track); }, 0);
     } catch (err) {
       status.textContent = "Couldn't decode " + f.name;
       continue;
@@ -1263,6 +1425,7 @@ async function boot () {
   setupFullAuto();
   setupRandomLoad();
   setupShare();
+  setupHotcues();
 
   window.__JB = {
     ctx: () => ctx, decks, library, ensureAudio, loadToDeck, toggleRecord,
@@ -1273,13 +1436,17 @@ async function boot () {
     recording: () => !!recorder,
     playScratch, scratchFx: SCRATCH_FX,
     // FULL AUTO + random load + share (also handy for QA)
-    setFullAuto, fullAuto, loadRandomToDeck, onDeckEnded
+    setFullAuto, fullAuto, loadRandomToDeck, onDeckEnded,
+    // hot cues + harmonic key detection
+    estimateKey, trackKey, keysCompatible, refreshDeckKey, refreshHotcues
   };
   document.body.classList.add("booted");
   if (window.JBAutoMix) window.JBAutoMix.boot(window.__JB);
   try {
     await loadFeaturedTracks();   // real bundled songs first (top of the jukebox)
     await buildLibrary();         // then the pressed synth records
+    await loadSavedTracks();      // then any tracks you saved on a previous visit
+    precomputeKeys();             // detect every record's musical key in the background
   } catch (err) {
     $("#lib-status").textContent = "Track load failed — you can still add your own music.";
   }
