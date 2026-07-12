@@ -1,29 +1,15 @@
-name: 3 · Deploy to live site (repo → FTP)
+name: Deploy JukeboxDJ to live site (FTP)
 
-# Ships the child theme and the static project pages to photon-bounce.com.
-# Runs automatically when theme/ or projects/ change on main, and can be run
-# manually (use dry_run first to preview without uploading).
-#
-#  theme/                      -> /public_html/wp-content/themes/local-theme/   (synced, incl. deletions)
-#  projects/ausis/             -> /public_html/ausis/                           (upload-only, never deletes)
-#  projects/meditation-portal/ -> /public_html/meditation-portal/              (upload-only, never deletes)
-#  projects/leadgenerator/     -> /public_html/leadgenerator/                  (upload-only — staging, noindex)
-#  projects/orison/            -> /public_html/orison/                         (upload-only, never deletes)
-#  projects/suno-batch/        -> /public_html/suno-batch/                     (upload-only, never deletes)
-#  projects/jukeboxdj/         -> /public_html/jukeboxdj/                      (upload-only, never deletes)
-#  projects/photonreel/        -> /public_html/photonreel/                     (upload-only, never deletes)
-#
-# Project pages are upload-only on purpose: those server folders also hold large
-# binaries (APK, audio) that are intentionally NOT in this repo, so we must never
-# mirror-delete them.
+# Uploads projects/jukeboxdj/ -> /public_html/jukeboxdj/ on photon-bounce.com.
+# Upload-only (never --delete) so the large server-side binaries that are NOT in
+# this repo (e.g. the built APK) are never removed. Runs on push to main and can
+# be dispatched manually (dry_run previews without uploading).
 
 on:
   push:
     branches: [ main ]
     paths:
-      - "theme/**"
-      - "projects/**"
-      - "web-root/**"
+      - "projects/jukeboxdj/**"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
     inputs:
@@ -33,7 +19,7 @@ on:
         default: false
 
 concurrency:
-  group: ftp-deploy
+  group: ftp-deploy-jukeboxdj
   cancel-in-progress: false
 
 jobs:
@@ -46,7 +32,7 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
-      - name: Deploy via FTP
+      - name: Deploy projects/jukeboxdj -> /public_html/jukeboxdj/ (upload-only)
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
@@ -56,96 +42,13 @@ jobs:
           DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
         run: |
           set -euo pipefail
+          if [ -z "${FTP_SERVER:-}" ]; then
+            echo "::error::FTP secrets are not set — add FTP_SERVER / FTP_USERNAME / FTP_PASSWORD."
+            exit 1
+          fi
           OPTS="set ftp:ssl-allow true; set ssl:verify-certificate no; set ftp:ssl-protect-data true; set net:timeout 25; set net:max-retries 2; set cmd:fail-exit yes;"
-          # Globs protected from deletion on the theme sync (large/backup artefacts that live on the server but not in the repo).
-          KEEP="--exclude-glob *.zip --exclude-glob *.zipBAk --exclude-glob *.apk --exclude-glob *.mp3 --exclude-glob *.wav --exclude-glob *.mp4 --exclude-glob *.mov --exclude-glob *.psd --exclude-glob *.tar --exclude-glob *.gz --exclude-glob .git*"
-
-          echo "::group::Theme  ->  /public_html/wp-content/themes/local-theme/"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --delete --no-perms --no-symlinks --verbose $DRY $KEEP theme/ /public_html/wp-content/themes/local-theme/; bye"
-          echo "::endgroup::"
-
-          echo "::group::Ausis page  ->  /public_html/ausis/  (upload-only)"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/ausis/ /public_html/ausis/; bye"
-          echo "::endgroup::"
-
-          echo "::group::Meditation Portal  ->  /public_html/meditation-portal/  (upload-only)"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/meditation-portal/ /public_html/meditation-portal/; bye"
-          echo "::endgroup::"
-
-          echo "::group::Lead Generator (staging)  ->  /public_html/leadgenerator/  (upload-only)"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/leadgenerator/ /public_html/leadgenerator/; bye"
-          echo "::endgroup::"
-
-          echo "::group::Observer (mind-vs-RNG app)  ->  /public_html/observer/  (upload-only)"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/observer/ /public_html/observer/; bye"
-          echo "::endgroup::"
-
-          echo "::group::Orison (prayer-stream app)  ->  /public_html/orison/  (upload-only)"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/orison/ /public_html/orison/; bye"
-          echo "::endgroup::"
-
-          echo "::group::Suno Batch (bulk song tool site)  ->  /public_html/suno-batch/  (upload-only)"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/suno-batch/ /public_html/suno-batch/; bye"
-          echo "::endgroup::"
-
-          echo "::group::JukeboxDJ (twin-turntable app)  ->  /public_html/jukeboxdj/  (upload-only)"
+          echo "::group::JukeboxDJ  ->  /public_html/jukeboxdj/  (upload-only)"
           lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
             -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/jukeboxdj/ /public_html/jukeboxdj/; bye"
           echo "::endgroup::"
-
-          echo "::group::PhotonReel (AI music-video studio)  ->  /public_html/photonreel/  (upload-only)"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/photonreel/ /public_html/photonreel/; bye"
-          echo "::endgroup::"
-
-          # Site-root files (e.g. /.well-known/assetlinks.json for the Observer TWA).
-          # Upload-only into the web root — NEVER --delete here.
-          echo "::group::Web root  ->  /public_html/  (upload-only)"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY web-root/ /public_html/; bye"
-          echo "::endgroup::"
-
-          echo "Done. Dry run: ${{ inputs.dry_run || false }}"
-
-      - name: Inject server secrets (ElevenLabs voice) via FTP
-        if: ${{ !inputs.dry_run }}
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL || 'ftp' }}
-          FTP_PORT: ${{ vars.FTP_PORT || '21' }}
-          PB_ELEVENLABS_KEY: ${{ secrets.PB_ELEVENLABS_KEY }}
-          PB_ELEVENLABS_VOICE_ID: ${{ vars.PB_ELEVENLABS_VOICE_ID }}
-        run: |
-          set -euo pipefail
-          if [ -z "${PB_ELEVENLABS_KEY:-}" ]; then
-            echo "No PB_ELEVENLABS_KEY secret set — skipping voice config (browser fallback stays active)."
-            exit 0
-          fi
-          # Write a must-use plugin that defines the key server-side. It lives OUTSIDE
-          # the theme (so the theme mirror --delete never touches it) and outside the
-          # repo (the secret is only ever a GitHub Secret, never committed).
-          mkdir -p _mup
-          {
-            echo "<?php"
-            echo "/* Auto-generated by deploy.yml from GitHub Secrets. Do not edit on the server — overwritten each deploy. */"
-            echo "if ( ! defined( 'PB_ELEVENLABS_KEY' ) ) { define( 'PB_ELEVENLABS_KEY', '${PB_ELEVENLABS_KEY}' ); }"
-            if [ -n "${PB_ELEVENLABS_VOICE_ID:-}" ]; then
-              echo "if ( ! defined( 'PB_ELEVENLABS_VOICE_ID' ) ) { define( 'PB_ELEVENLABS_VOICE_ID', '${PB_ELEVENLABS_VOICE_ID}' ); }"
-            fi
-          } > _mup/pb-config.php
-          OPTS="set ftp:ssl-allow true; set ssl:verify-certificate no; set ftp:ssl-protect-data true; set net:timeout 25; set net:max-retries 2; set cmd:fail-exit yes;"
-          echo "::group::Voice config  ->  /public_html/wp-content/mu-plugins/pb-config.php"
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
-            -e "$OPTS mirror -R --no-perms --no-symlinks _mup/ /public_html/wp-content/mu-plugins/; bye"
-          echo "::endgroup::"
-          rm -rf _mup
-          echo "ElevenLabs key deployed to mu-plugins (value masked)."
+          echo "Deployed projects/jukeboxdj -> /public_html/jukeboxdj/. Dry run: ${{ inputs.dry_run || false }}"
