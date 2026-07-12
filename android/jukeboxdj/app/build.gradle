@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.photonbounce.jukeboxdj'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.photonbounce.jukeboxdj"
+        minSdk 26      // AudioWorklet needs a modern WebView; 26+ keeps the floor sane
+        targetSdk 35
+        versionCode 3
+        versionName "1.1.0"
+    }
+
+    buildTypes {
+        release {
+            // Left unsigned here on purpose — the CI workflow zipaligns and signs the
+            // release APK / AAB with a keystore (a real one from secrets, or an
+            // ephemeral one), so the published artifact is always installable.
+            //
+            // R8 is on so Play gets a deobfuscation (mapping.txt) file for readable
+            // crash/ANR stacks. The whole app package is kept (see proguard-rules.pro)
+            // — this is a WebView shell, so there's nothing of ours to obfuscate; R8
+            // only optimises the bundled libraries and emits the mapping. Resource
+            // shrinking is intentionally left OFF: the app's weight is the bundled web
+            // assets (assets/www), which resource shrinking can't touch anyway, and
+            // keeping it off removes any risk of stripping a referenced resource.
+            minifyEnabled true
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

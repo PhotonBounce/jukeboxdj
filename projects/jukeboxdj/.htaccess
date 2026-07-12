@@ -1,0 +1,25 @@
+# No directory listing for the JukeboxDJ app folder.
+Options -Indexes
+
+# Correct MIME type for the web app manifest (older Apache configs miss it).
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+# LiteSpeed: never page-cache this app at the server (the host has previously
+# served day-old JS from its page cache — fresh HTML + stale JS = dead app).
+<IfModule LiteSpeed>
+  CacheDisable public /
+  CacheDisable private /
+</IfModule>
+
+# Browser caching: HTML + sw.js always revalidate; JS/CSS/images may be reused
+# briefly but only by the end user (private => no shared/server caches).
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|svg|png)$">
+    Header set Cache-Control "private, max-age=3600, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(html)$|sw\.js$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
