@@ -542,3 +542,140 @@ body.beating .btn-play.on,body.beating #btn-full-auto.on{
 .deck-key.harmonic::after{content:" ✓ in key";font-size:9px;font-weight:800}
 .lib-key{font-size:11px;font-weight:800;color:var(--aurora);width:38px;text-align:right;
   font-variant-numeric:tabular-nums;opacity:.85}
+
+/* ═══════════════════════════════════════════════════════════════════
+   v2 CONSOLIDATED LAYOUT — 2 panels, inline slider EQ, tiny turntables
+   (overrides earlier deck/mixer rules; the old knob mixer is retired)
+   ═══════════════════════════════════════════════════════════════════ */
+#app{gap:10px;padding:8px 10px 24px}
+
+/* prominent logo */
+#brand{gap:12px}
+.brand-disc{width:44px;height:44px;border-radius:11px;box-shadow:0 0 20px rgba(125,211,252,.5),0 0 40px rgba(167,139,250,.25)}
+.brand-txt{display:flex;flex-direction:column;line-height:1}
+.brand-txt b{font-size:24px;font-weight:900;letter-spacing:.02em}
+.brand-txt small{font-size:10px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-top:2px}
+#top-actions .chip{padding:8px 12px;font-size:12.5px}
+
+/* ── Panel 1: decks ── */
+#decks-panel{background:linear-gradient(180deg,rgba(20,17,40,.6),rgba(12,10,28,.7));border:1px solid var(--border);
+  border-radius:18px;padding:10px;box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.decks-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}     /* ALWAYS two columns, even on phones */
+
+.deck{padding:9px 9px 10px;gap:7px;border-radius:14px}
+.deck-head{gap:6px;min-height:20px;align-items:center}
+.deck-tag{font-size:10px;padding:2px 6px}
+.deck-track{font-size:12px;font-weight:800}
+.btn-rand{width:28px;height:28px;font-size:14px;border-radius:8px}
+.deck-top{display:flex;align-items:center;gap:8px;position:relative;z-index:2}
+.platter{width:56px!important;max-width:56px;flex:none}                /* turntables ~75% smaller */
+.deck-readout{flex:1;justify-content:flex-end;gap:4px}
+.bpm-val{font-size:15px}
+.wave{height:38px;border-radius:7px}
+
+/* EQ / pitch / volume as big touch sliders */
+.deck-eq{display:flex;flex-direction:column;gap:6px;position:relative;z-index:2}
+.sl{display:flex;align-items:center;gap:8px;height:30px}
+.sl > span{flex:none;width:48px;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:var(--faint);text-align:right}
+.sl input[type=range]{flex:1;min-width:0}
+/* force horizontal + fat thumbs (override the old vertical pitch/fader rules) */
+.deck-eq input[type=range],.mixbar input[type=range]{
+  writing-mode:horizontal-tb!important;-webkit-appearance:none!important;appearance:none!important;
+  direction:ltr!important;width:auto!important;height:30px!important;background:transparent;cursor:pointer;touch-action:none}
+.deck-eq input[type=range]::-webkit-slider-runnable-track,.mixbar input[type=range]::-webkit-slider-runnable-track{
+  height:8px;border-radius:5px;background:linear-gradient(90deg,rgba(167,139,250,.5),rgba(125,211,252,.5));box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+.deck-eq input[type=range]::-webkit-slider-thumb,.mixbar input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:9px;
+  background:linear-gradient(180deg,#EDEBFF,#B9B4E6);border:1px solid #7C77B8;box-shadow:0 2px 8px rgba(0,0,0,.55)}
+.deck-eq input[type=range]::-moz-range-track,.mixbar input[type=range]::-moz-range-track{height:8px;border-radius:5px;background:linear-gradient(90deg,rgba(167,139,250,.5),rgba(125,211,252,.5))}
+.deck-eq input[type=range]::-moz-range-thumb,.mixbar input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:9px;background:#CFCBEF;border:1px solid #7C77B8}
+.eq-slider[data-band="filter"]::-webkit-slider-runnable-track{background:linear-gradient(90deg,var(--aurora),rgba(255,255,255,.1),var(--rose))}
+
+/* transport — small, tidy, still tappable */
+.deck-transport{display:flex;align-items:center;gap:6px;position:relative;z-index:2;flex-wrap:wrap}
+.btn-cue,.btn-sync{padding:0 12px;min-height:40px;font-size:12px;border-radius:10px}
+.btn-play{width:46px;height:46px;font-size:18px}
+.loops{gap:5px;margin-left:auto}
+.loops::before{content:"LOOP";font-size:8px}
+.btn-loop{width:34px;height:34px;font-size:13px;border-radius:9px}
+.hotcues{gap:5px;margin-top:0}
+.hc-label{font-size:8px}
+.hc-pad{width:30px;height:28px;font-size:11px;border-radius:7px}
+.deck-key{font-size:10px;padding:2px 6px;min-width:0}
+
+/* crossfader + master bar under the decks */
+.mixbar{display:flex;gap:14px;align-items:center;margin-top:9px;padding:8px 6px 2px;flex-wrap:wrap}
+.mixbar .sl{flex:1;min-width:200px;height:32px}
+.mixbar .sl > span{width:auto;color:var(--muted);font-size:10px}
+.mixbar .xf > span{font-weight:900;color:var(--faint)}
+
+/* ── Panel 2: controls ── */
+#controls-panel{background:linear-gradient(90deg,rgba(167,139,250,.1),rgba(94,234,212,.07));
+  border:1px solid var(--border-lt);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px;
+  box-shadow:0 12px 34px rgba(0,0,0,.35)}
+.ctl-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#btn-full-auto{flex:1;min-width:200px}          /* reuse the FULL AUTO styles from before */
+#btn-stop-all{flex:none;padding:12px 16px;min-height:48px;border-radius:12px;font-size:13px;font-weight:900;letter-spacing:.06em;
+  background:rgba(251,113,133,.14);border:1px solid rgba(251,113,133,.55);color:#FB7185;transition:all .15s}
+#btn-stop-all:hover{background:rgba(251,113,133,.26);box-shadow:0 0 16px rgba(251,113,133,.4)}
+#btn-stop-all:active{transform:scale(.95)}
+.ctl-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#btn-automix{display:inline-flex;align-items:center;gap:7px;padding:10px 15px;border-radius:11px;font-weight:800;font-size:13.5px;
+  background:linear-gradient(135deg,var(--iris),var(--teal));color:#0B0B1E;transition:all .18s}
+#btn-automix:hover{box-shadow:0 0 18px rgba(167,139,250,.5)}
+#automix-status{font-size:12px;color:var(--muted);flex:1 1 100%;white-space:normal}
+#controls-panel.mixing{border-color:var(--aurora);box-shadow:0 0 24px rgba(94,234,212,.3)}
+#controls-panel.mixing .am-mix-btn{opacity:.5;pointer-events:none}
+
+/* ── footer credits (photon-bounce.com) ── */
+#help{padding:14px 12px 4px;text-align:center}
+.credits{display:flex;flex-direction:column;align-items:center;gap:8px;
+  background:linear-gradient(180deg,rgba(20,17,40,.5),transparent);border:1px solid var(--border);border-radius:16px;
+  padding:18px 16px}
+.credit-brand{display:inline-flex;align-items:center;gap:9px;font-size:19px}
+.credit-brand .brand-disc{width:30px;height:30px;border-radius:8px}
+.credit-brand b{font-weight:900;letter-spacing:.02em;color:var(--text)}
+.credit-brand i{font-style:normal;background:linear-gradient(135deg,var(--iris-lt),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+.credits p{max-width:60ch;color:var(--muted);font-size:13px;line-height:1.7}
+.credit-links{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:center;font-size:13px;font-weight:700}
+.credit-links a{color:var(--iris-lt)}
+.credit-copy{color:var(--faint);font-size:11.5px}
+.help-keys{color:var(--muted);font-size:12px;margin-top:10px;line-height:1.7}
+.help-keys i{font-style:normal;border:1px solid var(--border-lt);border-radius:5px;padding:1px 6px;color:var(--iris-lt);font-size:11px}
+.help-keys b{color:var(--text)}
+
+/* phones: keep BOTH decks side-by-side, just tighter */
+@media (max-width:640px){
+  .decks-grid{grid-template-columns:1fr 1fr;gap:7px}
+  .deck{padding:7px}
+  .platter{width:46px!important;max-width:46px}
+  .sl > span{width:40px;font-size:8.5px}
+  .deck-eq input[type=range]::-webkit-slider-thumb,.mixbar input[type=range]::-webkit-slider-thumb{width:30px;height:30px;margin-top:-11px}
+  .btn-cue,.btn-sync{padding:0 9px;min-height:38px;font-size:11px}
+  .btn-play{width:42px;height:42px}
+  .mixbar .sl{min-width:100%}
+  .deck-readout{font-size:11px}
+  .deck-readout .time-val{display:none}
+  #top-actions{flex-wrap:wrap;gap:6px}
+  #btn-full-auto,#btn-stop-all{min-width:100%}
+}
+
+/* scratch-FX: title as a header line, pads wrap small & full-width (fixes phone stacking) */
+#fx-bar{flex-wrap:wrap;gap:8px}
+.fx-title{flex:1 1 100%}
+#fx-pads{width:100%;display:flex;flex-wrap:wrap;gap:6px}
+.fx-pad{min-width:0;padding:8px 12px;font-size:12px}
+@media (max-width:640px){ .fx-pad{padding:7px 11px;font-size:11.5px} }
+
+/* ── Pro / paywall additions ── */
+.pro-trial{border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:12px;line-height:1.5}
+.pro-trial.ok{background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.4);color:var(--aurora)}
+.pro-trial.end{background:rgba(251,113,133,.1);border:1px solid rgba(251,113,133,.45);color:#FB7185}
+.pro-trial b{color:var(--text)}
+.pro-price{font-size:26px;font-weight:900;color:var(--gold);text-shadow:0 0 18px rgba(245,200,66,.35);margin-bottom:12px}
+.pro-price small{display:block;font-size:11.5px;font-weight:600;color:var(--faint);letter-spacing:.02em;margin-top:3px}
+.pay-methods{margin-bottom:8px}
+.pay-methods .pro-chip.on{background:rgba(167,139,250,.2);border-color:var(--iris);color:var(--iris-lt)}
+.pro-method-body{min-height:20px;margin-bottom:14px}
+.pro-hint{color:var(--faint);font-size:12.5px;text-align:center;padding:10px 0}
+.pro-method-body .pro-sub{margin:8px 0}

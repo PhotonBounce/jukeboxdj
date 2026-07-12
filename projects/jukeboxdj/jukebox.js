@@ -582,11 +582,10 @@ function setupMixNotes () {
   document.querySelectorAll(".deck-notes").forEach((h) => fillNotes(h, 7));
 }
 
-/* mixer beat state — driven by the currently-playing deck's beat grid */
+/* beat state — driven by the currently-playing deck's beat grid, published on
+   :root so the decks, buttons and every panel pulse to the beat. */
 let beatHue = 200, beatPulse = 0, lastBeatPhase = 0;
 function driveMixerBeat () {
-  const mixer = $("#mixer");
-  if (!mixer) return;
   const pd = decks.A && decks.A.playing ? "A" : (decks.B && decks.B.playing ? "B" : null);
   if (pd) {
     const bi = beatInfo(pd);
@@ -594,18 +593,11 @@ function driveMixerBeat () {
       if (bi.phase < lastBeatPhase - 0.3) { beatHue = (beatHue + 26) % 360; beatPulse = 1; } // new beat
       lastBeatPhase = bi.phase;
     }
-    mixer.classList.add("beating");
-  } else {
-    mixer.classList.remove("beating");
   }
   beatPulse *= 0.90;
-  const hue = beatHue.toFixed(1), pulse = beatPulse.toFixed(3);
-  mixer.style.setProperty("--beat-hue", hue);
-  mixer.style.setProperty("--beat-pulse", pulse);
-  // publish on :root so decks, buttons and every panel can pulse to the beat too
   const root = document.documentElement;
-  root.style.setProperty("--beat-hue", hue);
-  root.style.setProperty("--beat-pulse", pulse);
+  root.style.setProperty("--beat-hue", beatHue.toFixed(1));
+  root.style.setProperty("--beat-pulse", beatPulse.toFixed(3));
   document.body.classList.toggle("beating", !!pd);
 }
 
@@ -1016,8 +1008,13 @@ const pendingRates = { A: 1, B: 1 };
 
 function updatePitchLabel (id) {
   const el = deckEls(id);
+  if (!el.pitch) return;
   const v = Number(el.pitch.value) / 10;
-  el.pitchVal.textContent = (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+  const lbl = (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+  if (el.pitchVal) el.pitchVal.textContent = lbl;
+  // show the live pitch on the slider's label ("PITCH +4.0%")
+  const span = el.pitch.closest(".sl") && el.pitch.closest(".sl").querySelector("span");
+  if (span) span.textContent = "PITCH " + lbl;
 }
 
 ui.deckPlayChanged = (id) => {
@@ -1076,37 +1073,47 @@ function setupKnob (elm, { min, max, value, onChange }) {
   return { set, get: () => v };
 }
 
+/* EQ / filter / volume are now big touch SLIDERS living inside each deck.
+   filter maps a single -1..+1 slider onto low-pass ↔ high-pass. */
+function applyBand (id, band, v) {
+  const d = decks[id]; if (!d) return;
+  if (band === "lo") d.eqLo.gain.value = v;
+  else if (band === "mid") d.eqMid.gain.value = v;
+  else if (band === "hi") d.eqHi.gain.value = v;
+  else if (band === "filter") {
+    const f = d.filter;
+    if (Math.abs(v) < 0.06) { f.type = "allpass"; f.frequency.value = 1000; f.Q.value = 0.8; }
+    else if (v < 0) { f.type = "lowpass"; f.Q.value = 6; f.frequency.value = 12000 * Math.pow(0.008, -v); }
+    else { f.type = "highpass"; f.Q.value = 6; f.frequency.value = 30 * Math.pow(220, v); }
+  } else if (band === "vol") d.chanGain.gain.value = Math.pow(v / 100, 1.4);
+}
 function setupMixer () {
   ["A", "B"].forEach((id) => {
-    const side = id.toLowerCase();
-    setupKnob($("#eq-hi-" + side), { min: -22, max: 12, value: 0, onChange: (v) => { decks[id].eqHi.gain.value = v; } });
-    setupKnob($("#eq-mid-" + side), { min: -22, max: 12, value: 0, onChange: (v) => { decks[id].eqMid.gain.value = v; } });
-    setupKnob($("#eq-lo-" + side), { min: -22, max: 12, value: 0, onChange: (v) => { decks[id].eqLo.gain.value = v; } });
-    setupKnob($("#filter-" + side), { min: -1, max: 1, value: 0, onChange: (v) => {
-      const f = decks[id].filter;
-      if (Math.abs(v) < 0.06) { f.type = "allpass"; f.frequency.value = 1000; f.Q.value = 0.8; }
-      else if (v < 0) { f.type = "lowpass"; f.Q.value = 6; f.frequency.value = 12000 * Math.pow(0.008, -v); }
-      else { f.type = "highpass"; f.Q.value = 6; f.frequency.value = 30 * Math.pow(220, v); }
-    } });
-    setupKnob($("#echo-" + side), { min: 0, max: 1, value: 0, onChange: (v) => { decks[id].echoSend.gain.value = v * 0.85; } });
-    const fader = $("#fader-" + side);
-    fader.addEventListener("input", async () => {
-      await ensureAudio();
-      decks[id].chanGain.gain.value = Math.pow(Number(fader.value) / 100, 1.4);
+    const root = deckEls(id).root;
+    $$(".eq-slider, .chan-fader", root).forEach((sl) => {
+      const band = sl.dataset.band;
+      const apply = async () => { await ensureAudio(); applyBand(id, band, Number(sl.value)); };
+      sl.addEventListener("input", apply);
+      // double-tap a slider to recenter it (0 for EQ/filter, keep vol)
+      sl.addEventListener("dblclick", () => { if (band !== "vol") { sl.value = "0"; apply(); } });
     });
   });
   const x = $("#crossfader");
-  x.addEventListener("input", async () => {
-    await ensureAudio();
-    crossPos = Number(x.value) / 100;
-    applyCrossfader();
-  });
+  x.addEventListener("input", async () => { await ensureAudio(); crossPos = Number(x.value) / 100; applyCrossfader(); });
   const mg = $("#master-gain");
-  mg.addEventListener("input", async () => {
-    await ensureAudio();
-    master.gain.value = Math.pow(Number(mg.value) / 100, 1.3) * 1.2;
-  });
-  $("#btn-rec").addEventListener("click", async () => { await ensureAudio(); toggleRecord(); });
+  mg.addEventListener("input", async () => { await ensureAudio(); master.gain.value = Math.pow(Number(mg.value) / 100, 1.3) * 1.2; });
+  const rec = $("#btn-rec");
+  if (rec) rec.addEventListener("click", async () => { await ensureAudio(); toggleRecord(); });
+  const stop = $("#btn-stop-all");
+  if (stop) stop.addEventListener("click", stopAll);
+}
+
+/* STOP ALL — silence everything: halt Auto-Mix + Full Auto, pause both decks. */
+function stopAll () {
+  try { if (window.JBAutoMix && window.JBAutoMix.isRunning && window.JBAutoMix.isRunning()) window.JBAutoMix.stop(); } catch (e) {}
+  try { setFullAuto(false); } catch (e) {}
+  ["A", "B"].forEach((id) => { const d = decks[id]; if (d && d.playing) { d.togglePlay(); ui.deckPlayChanged(id); } });
+  if (window.JBToast) window.JBToast("■ Stopped all decks.");
 }
 
 /* ────────────────────────── library / jukebox ────────────────────────── */
@@ -1438,7 +1445,8 @@ async function boot () {
     // FULL AUTO + random load + share (also handy for QA)
     setFullAuto, fullAuto, loadRandomToDeck, onDeckEnded,
     // hot cues + harmonic key detection
-    estimateKey, trackKey, keysCompatible, refreshDeckKey, refreshHotcues
+    estimateKey, trackKey, keysCompatible, refreshDeckKey, refreshHotcues,
+    stopAll, applyBand
   };
   document.body.classList.add("booted");
   if (window.JBAutoMix) window.JBAutoMix.boot(window.__JB);

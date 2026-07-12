@@ -28,12 +28,15 @@ const rand = () => (rng = (rng * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
 
 const clickables = [
   "#deckA .btn-play", "#deckB .btn-play", "#deckA .btn-cue", "#deckB .btn-cue",
-  "#deckA .btn-sync", "#deckB .btn-sync", "#btn-rec", "#btn-autoload",
-  '#deckA .btn-loop[data-beats="1"]', '#deckA .btn-loop[data-beats="8"]',
-  '#deckB .btn-loop[data-beats="2"]', '#deckB .btn-loop[data-beats="4"]',
+  "#deckA .btn-sync", "#deckB .btn-sync", "#btn-rec", "#btn-autoload", "#btn-stop-all",
+  "#deckA .btn-rand", "#deckB .btn-rand", "#deckA .hc-pad", '#deckB .hc-pad[data-i="1"]',
+  '#deckA .btn-loop[data-beats="2"]', '#deckB .btn-loop[data-beats="4"]',
   ".lib-row:nth-child(2) .to-a", ".lib-row:nth-child(5) .to-b", ".lib-row:nth-child(3) .to-a"
 ];
-const sliders = ["#crossfader", "#master-gain", "#fader-a", "#fader-b", "#deckA .pitch", "#deckB .pitch"];
+const sliders = ["#crossfader", "#master-gain", "#deckA .chan-fader", "#deckB .chan-fader",
+  "#deckA .pitch", "#deckB .pitch",
+  '#deckA .eq-slider[data-band="lo"]', '#deckA .eq-slider[data-band="hi"]',
+  '#deckB .eq-slider[data-band="mid"]', '#deckA .eq-slider[data-band="filter"]'];
 const keys = ["q", "p", "z", "x", "c"];
 
 const t0 = Date.now();
@@ -67,7 +70,7 @@ while (Date.now() - t0 < 45000) {
       await page.keyboard.press(keys[(rand() * keys.length) | 0]);
     } else {
       // drag a random knob
-      const knobs = ["#eq-hi-a", "#eq-mid-b", "#eq-lo-a", "#filter-a", "#filter-b", "#echo-a", "#echo-b"];
+      const knobs = ['#deckA .eq-slider[data-band="hi"]', '#deckB .eq-slider[data-band="mid"]', '#deckA .eq-slider[data-band="lo"]', '#deckA .eq-slider[data-band="filter"]', '#deckB .eq-slider[data-band="filter"]', "#deckA .chan-fader", "#deckB .chan-fader"];
       const kb = await page.locator(knobs[(rand() * knobs.length) | 0]).boundingBox();
       await page.mouse.move(kb.x + kb.width / 2, kb.y + kb.height / 2);
       await page.mouse.down();

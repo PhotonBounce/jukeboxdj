@@ -51,22 +51,23 @@ const resumed = await page.evaluate(async () => {
 });
 ok("motor resumes forward playback after scratch", resumed > 8000, "Δframes=" + (resumed | 0));
 
-// ── knob drag: EQ hi knob up via pointer ──
-const knob = page.locator("#eq-hi-a");
-const kb = await knob.boundingBox();
-await page.mouse.move(kb.x + kb.width / 2, kb.y + kb.height / 2);
-await page.mouse.down();
-await page.mouse.move(kb.x + kb.width / 2, kb.y + kb.height / 2 - 60, { steps: 8 });
-await page.mouse.up();
+// ── EQ is now a big touch SLIDER inside the deck ──
+const treble = page.locator('#deckA .eq-slider[data-band="hi"]');
+await treble.fill("10");
+await treble.dispatchEvent("input");
 const hiGain = await page.evaluate(() => window.__JB.decks.A.eqHi.gain.value);
-ok("EQ knob drag raises high-shelf gain", hiGain > 3, "gain=" + hiGain.toFixed(1));
-await page.evaluate(() => { window.__JB.decks.A.eqHi.gain.value = 0; });
-
-// double-click resets knob (force: the EQ cubes spin continuously by design, so
-// bypass Playwright's stability gate — a real click lands on a moving element fine)
-await knob.dblclick({ force: true });
+ok("TREBLE slider raises high-shelf gain", hiGain > 3, "gain=" + hiGain.toFixed(1));
+// double-tap a slider recenters it to 0
+await treble.dblclick({ force: true });
 const hiReset = await page.evaluate(() => window.__JB.decks.A.eqHi.gain.value);
-ok("knob double-click resets to center", Math.abs(hiReset) < 0.01, "gain=" + hiReset.toFixed(2));
+ok("slider double-click resets to center", Math.abs(hiReset) < 0.01, "gain=" + hiReset.toFixed(2));
+// filter slider engages the per-deck filter
+await page.locator('#deckA .eq-slider[data-band="filter"]').fill("-0.8");
+await page.locator('#deckA .eq-slider[data-band="filter"]').dispatchEvent("input");
+const ftype = await page.evaluate(() => window.__JB.decks.A.filter.type);
+ok("FILTER slider engages low-pass", ftype === "lowpass", ftype);
+await page.locator('#deckA .eq-slider[data-band="filter"]').fill("0");
+await page.locator('#deckA .eq-slider[data-band="filter"]').dispatchEvent("input");
 
 // ── waveform needle drop ──
 const wave = page.locator("#deckA .wave");
@@ -76,9 +77,9 @@ await page.waitForTimeout(200);
 const frac = await page.evaluate(() => window.__JB.decks.A.pos / window.__JB.decks.A.track.buffer.length);
 ok("waveform click needle-drops to ~75%", Math.abs(frac - 0.75) < 0.05, "frac=" + frac.toFixed(3));
 
-// scrubber is a tall, visible strip (upgraded from the thin 44px bar)
+// scrubber is a visible strip (compact in the consolidated layout)
 const waveH = await page.evaluate(() => document.querySelector("#deckA .wave").clientHeight);
-ok("scrubber is tall/visible (>=60px)", waveH >= 60, waveH + "px");
+ok("scrubber is visible (>=30px)", waveH >= 30, waveH + "px");
 // dragging the scrubber scrubs continuously (a real handle drag, not just a click)
 const scrubbed = await page.evaluate(async () => {
   const d = window.__JB.decks.A;
@@ -175,21 +176,28 @@ await page.click('#deckA .btn-loop[data-beats="4"]');
 const loopOff = await page.evaluate(() => window.__JB.decks.A.loopBeats);
 ok("loop 4 engages and disengages", loopOn === 4 && loopOff === 0, `${loopOn}→${loopOff}`);
 
-// ── mixer color-shifts to the beat, notes swim in the "water" ──
-const waterEl = await page.$("#mixer .mix-water");
-const swimNotes = await page.$$eval("#mixer .mix-notes .note", (ns) => ns.length);
-ok("mixer has color-water + swimming notes", !!waterEl && swimNotes >= 11, swimNotes + " notes");
+// ── decks color-shift to the beat, notes swim in the "water" (mixer retired) ──
+const waterEl = await page.$("#deckA .deck-water");
+const swimNotes = await page.$$eval(".deck-notes .note", (ns) => ns.length);
+ok("decks have color-water + swimming notes", !!waterEl && swimNotes >= 11, swimNotes + " notes");
 await page.evaluate(() => { const d = window.__JB.decks.A; d.cue = 0; d.seek(0); if (!d.playing) d.togglePlay(); });
 await page.waitForTimeout(1400);
 const beatSamples = [];
-for (let i = 0; i < 10; i++) { beatSamples.push(Number(await page.evaluate(() => getComputedStyle(document.querySelector("#mixer")).getPropertyValue("--beat-hue")))); await page.waitForTimeout(200); }
+for (let i = 0; i < 10; i++) { beatSamples.push(Number(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--beat-hue")))); await page.waitForTimeout(200); }
 const hueMoves = new Set(beatSamples).size > 1;
-const beatingWhilePlaying = await page.evaluate(() => document.querySelector("#mixer").classList.contains("beating"));
+const beatingWhilePlaying = await page.evaluate(() => document.body.classList.contains("beating"));
 ok("beat-hue shifts while a deck plays", hueMoves && beatingWhilePlaying, beatSamples.join(","));
 await page.evaluate(() => { const d = window.__JB.decks.A; if (d.playing) d.togglePlay(); });
 await page.waitForTimeout(250);
-const stoppedBeating = await page.evaluate(() => document.querySelector("#mixer").classList.contains("beating"));
-ok("mixer stops pulsing when nothing plays", !stoppedBeating);
+const stoppedBeating = await page.evaluate(() => document.body.classList.contains("beating"));
+ok("beat pulsing stops when nothing plays", !stoppedBeating);
+
+// STOP ALL silences both decks
+await page.evaluate(() => { ["A","B"].forEach((id)=>{ const d=window.__JB.decks[id]; if(!d.playing) d.togglePlay(); }); });
+await page.click("#btn-stop-all");
+await page.waitForTimeout(150);
+const anyPlaying = await page.evaluate(() => window.__JB.decks.A.playing || window.__JB.decks.B.playing);
+ok("STOP ALL halts every deck", !anyPlaying);
 
 // ── scratch FX pads: 10 synthesized vinyl hits, keys 1–0 ──
 const padCount = await page.$$eval("#fx-pads .fx-pad", (b) => b.length);
@@ -210,10 +218,12 @@ await mob.tap("#deckA .btn-play");
 await mob.waitForTimeout(700);
 const stacked = await mob.evaluate(() => {
   const a = document.querySelector("#deckA").getBoundingClientRect();
-  const m = document.querySelector("#mixer").getBoundingClientRect();
-  return a.bottom <= m.top + 2 && a.width > 300;
+  const b = document.querySelector("#deckB").getBoundingClientRect();
+  const lib = document.querySelector("#library").getBoundingClientRect();
+  // both decks sit side-by-side on the same row, with the library below them
+  return Math.abs(a.top - b.top) < 4 && a.right <= b.left + 2 && lib.top >= a.bottom - 2;
 });
-ok("mobile layout stacks deck above mixer", stacked);
+ok("mobile keeps both decks side-by-side, library below", stacked);
 const mBox = await mob.locator("#deckA .platter").boundingBox();
 const mPos0 = await mob.evaluate(() => window.__JB.decks.A.pos);
 // touch-drag backwards
