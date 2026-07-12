@@ -64,7 +64,7 @@ class Deck {
       // stale spot. Only mirror the position once the worklet has acknowledged our
       // latest seek (echoed seekId matches); velocity is always safe to mirror.
       if (m.t === "pos") { if (m.seekId === this._seekId) this.pos = m.p; this.vel = m.v; }
-      else if (m.t === "ended") { this.playing = false; ui.deckPlayChanged(this.id); }
+      else if (m.t === "ended") { onDeckEnded(this.id); }
     };
 
     // EQ: low shelf / mid peak / high shelf, then a one-knob LP↔HP filter.
@@ -552,21 +552,25 @@ async function playScratch (id) {
   if (window.JBToast && false) {} // (no toast — keep it snappy)
 }
 
-/* Musical notes that swim inside the color-changing "water" of the mixer. */
-function setupMixNotes () {
-  const host = $(".mix-notes");
+/* Musical notes that swim inside the color-changing "water" of a panel. */
+function fillNotes (host, count) {
   if (!host) return;
   const glyphs = ["♪", "♫", "♬", "♩", "♭"];
-  for (let i = 0; i < 11; i++) {
+  for (let i = 0; i < count; i++) {
     const n = document.createElement("span");
     n.className = "note";
     n.textContent = glyphs[i % glyphs.length];
     n.style.left = (4 + Math.random() * 90) + "%";
-    n.style.fontSize = (13 + Math.random() * 16) + "px";
+    n.style.fontSize = (12 + Math.random() * 15) + "px";
     n.style.animationDuration = (5 + Math.random() * 5).toFixed(2) + "s";
     n.style.animationDelay = (-Math.random() * 8).toFixed(2) + "s";
     host.appendChild(n);
   }
+}
+function setupMixNotes () {
+  fillNotes($(".mix-notes"), 11);
+  // the same swimming notes now fill each turntable deck's water too
+  document.querySelectorAll(".deck-notes").forEach((h) => fillNotes(h, 7));
 }
 
 /* mixer beat state — driven by the currently-playing deck's beat grid */
@@ -586,8 +590,105 @@ function driveMixerBeat () {
     mixer.classList.remove("beating");
   }
   beatPulse *= 0.90;
-  mixer.style.setProperty("--beat-hue", beatHue.toFixed(1));
-  mixer.style.setProperty("--beat-pulse", beatPulse.toFixed(3));
+  const hue = beatHue.toFixed(1), pulse = beatPulse.toFixed(3);
+  mixer.style.setProperty("--beat-hue", hue);
+  mixer.style.setProperty("--beat-pulse", pulse);
+  // publish on :root so decks, buttons and every panel can pulse to the beat too
+  const root = document.documentElement;
+  root.style.setProperty("--beat-hue", hue);
+  root.style.setProperty("--beat-pulse", pulse);
+  document.body.classList.toggle("beating", !!pd);
+}
+
+/* ─────────── auto-restart · random load · FULL AUTO DJ · share ─────────── */
+let lastMixBlob = null;   // most recent recording, kept for the Share button
+
+function randomTrack (exclude) {
+  const pool = library.filter((t) => t && t.buffer && t !== exclude);
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+async function loadRandomToDeck (id) {
+  const other = decks[id === "A" ? "B" : "A"].track;
+  const t = randomTrack(other);
+  if (t) await loadToDeck(id, t);
+  return t;
+}
+
+/* When a record reaches the end it restarts (regular tracks loop). In FULL AUTO
+   "song end" mode the end of the live track instead triggers the next blend. */
+function onDeckEnded (id) {
+  const d = decks[id];
+  if (fullAuto.on && fullAuto.intervalSec === 0) { d.playing = false; ui.deckPlayChanged(id); fullAutoTick(); return; }
+  d.seek(0);
+  d.playing = true;
+  d.node.port.postMessage({ t: "play", on: true });
+  ui.deckPlayChanged(id);
+}
+
+/* FULL AUTO — hands-free AI DJ: keeps bringing in fresh records and blending. */
+const fullAuto = { on: false, intervalSec: 30, timer: null };
+async function fullAutoTick () {
+  if (!fullAuto.on) return;
+  if (window.JBAutoMix && window.JBAutoMix.isRunning()) return;   // never overlap a running mix
+  const inc = crossPos < 0.5 ? "B" : "A";                         // bring the new record in on the quiet deck
+  const live = inc === "A" ? "B" : "A";
+  await loadRandomToDeck(inc);
+  if (decks[live].track && !decks[live].playing) { decks[live].togglePlay(); ui.deckPlayChanged(live); }
+  if (window.JBAutoMix) await window.JBAutoMix.play(window.JBAutoMix.smartPick());
+}
+async function setFullAuto (on) {
+  fullAuto.on = !!on;
+  const btn = $("#btn-full-auto");
+  if (btn) {
+    btn.setAttribute("aria-pressed", fullAuto.on ? "true" : "false");
+    btn.classList.toggle("on", fullAuto.on);
+    const s = $(".fa-state", btn); if (s) s.textContent = fullAuto.on ? "ON" : "OFF";
+  }
+  document.body.classList.toggle("full-auto", fullAuto.on);
+  clearInterval(fullAuto.timer); fullAuto.timer = null;
+  if (!fullAuto.on) return;
+  await ensureAudio();
+  if (!decks.A.track) await loadRandomToDeck("A");
+  if (!decks.B.track) await loadRandomToDeck("B");
+  if (!decks.A.playing && !decks.B.playing) { decks.A.togglePlay(); ui.deckPlayChanged("A"); setCrossfader(0); }
+  if (fullAuto.intervalSec > 0) fullAuto.timer = setInterval(fullAutoTick, fullAuto.intervalSec * 1000);
+  // intervalSec === 0 ("song end") is driven by onDeckEnded
+}
+function setupFullAuto () {
+  const btn = $("#btn-full-auto");
+  if (btn) btn.addEventListener("click", () => setFullAuto(!fullAuto.on));
+  const ints = Array.from(document.querySelectorAll(".fa-int"));
+  const mark = () => ints.forEach((b) => b.classList.toggle("on", Number(b.dataset.sec) === fullAuto.intervalSec));
+  ints.forEach((b) => b.addEventListener("click", () => {
+    fullAuto.intervalSec = Number(b.dataset.sec);
+    mark();
+    if (fullAuto.on) setFullAuto(true);   // re-arm the timer at the new cadence
+  }));
+  mark();
+}
+function setupRandomLoad () {
+  ["A", "B"].forEach((id) => {
+    const btn = $(".btn-rand", deckEls(id).root);
+    if (btn) btn.addEventListener("click", async () => { await ensureAudio(); await loadRandomToDeck(id); });
+  });
+}
+function setupShare () {
+  const btn = $("#btn-share");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    if (!lastMixBlob) { if (window.JBToast) window.JBToast("Record a mix first, then share it."); return; }
+    const file = new File([lastMixBlob], "jukeboxdj-mix.webm", { type: lastMixBlob.type || "audio/webm" });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "My JukeboxDJ mix", text: "Mixed on JukeboxDJ 🎧 https://www.photon-bounce.com/jukeboxdj/" });
+        return;
+      }
+    } catch (e) { /* user cancelled or unsupported — fall through to download */ }
+    const a = $("#rec-save");
+    if (a && a.href) a.click();
+    else if (window.JBToast) window.JBToast("Sharing isn't supported here — use Save mix to download.");
+  });
 }
 
 function setupScratchPads () {
@@ -789,6 +890,10 @@ ui.recStopped = (blob) => {
   a.hidden = false;
   a.classList.add("pulse");
   setTimeout(() => a.classList.remove("pulse"), 3000);
+  // keep the blob so the Share button can hand it to the OS share sheet
+  lastMixBlob = blob;
+  const sh = $("#btn-share");
+  if (sh) { sh.hidden = false; sh.classList.add("pulse"); setTimeout(() => sh.classList.remove("pulse"), 3000); }
 };
 
 /* knobs: vertical-drag rotary controls */
@@ -1155,6 +1260,9 @@ async function boot () {
 
   setupScratchPads();
   setupMixNotes();
+  setupFullAuto();
+  setupRandomLoad();
+  setupShare();
 
   window.__JB = {
     ctx: () => ctx, decks, library, ensureAudio, loadToDeck, toggleRecord,
@@ -1163,7 +1271,9 @@ async function boot () {
     beatInfo, applyCrossfader, deckEls, updatePitchLabel,
     isRecording: () => !!recorder,
     recording: () => !!recorder,
-    playScratch, scratchFx: SCRATCH_FX
+    playScratch, scratchFx: SCRATCH_FX,
+    // FULL AUTO + random load + share (also handy for QA)
+    setFullAuto, fullAuto, loadRandomToDeck, onDeckEnded
   };
   document.body.classList.add("booted");
   if (window.JBAutoMix) window.JBAutoMix.boot(window.__JB);

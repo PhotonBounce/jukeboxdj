@@ -42,7 +42,7 @@ const tinyEnds = await page.evaluate(async () => {
   await new Promise((r) => setTimeout(r, 900)); // longer than the record
   return { playing: d.playing, pos: d.pos, len: d.track.buffer.length, finite: Number.isFinite(d.pos) };
 });
-ok("0.4s record plays to the end and stops itself", !tinyEnds.playing && tinyEnds.finite && tinyEnds.pos >= tinyEnds.len - 2, JSON.stringify({ pos: tinyEnds.pos | 0, len: tinyEnds.len }));
+ok("0.4s record loops (auto-restarts) at the end", tinyEnds.playing && tinyEnds.finite && tinyEnds.pos < tinyEnds.len, JSON.stringify({ pos: tinyEnds.pos | 0, len: tinyEnds.len }));
 
 // scratch violently past both ends of the tiny record
 const ends = await page.evaluate(async () => {

@@ -62,8 +62,9 @@ const hiGain = await page.evaluate(() => window.__JB.decks.A.eqHi.gain.value);
 ok("EQ knob drag raises high-shelf gain", hiGain > 3, "gain=" + hiGain.toFixed(1));
 await page.evaluate(() => { window.__JB.decks.A.eqHi.gain.value = 0; });
 
-// double-click resets knob
-await knob.dblclick();
+// double-click resets knob (force: the EQ cubes spin continuously by design, so
+// bypass Playwright's stability gate — a real click lands on a moving element fine)
+await knob.dblclick({ force: true });
 const hiReset = await page.evaluate(() => window.__JB.decks.A.eqHi.gain.value);
 ok("knob double-click resets to center", Math.abs(hiReset) < 0.01, "gain=" + hiReset.toFixed(2));
 

@@ -29,17 +29,40 @@
       <button id="btn-autoload" class="chip" title="Drop the first two records on the decks">⚡ Quick start</button>
       <button id="btn-rec" class="chip rec" title="Record the master output"><span class="rec-dot"></span><span id="rec-label">REC</span></button>
       <a id="rec-save" class="chip save" hidden download>⬇ Save mix</a>
+      <button id="btn-share" class="chip share2" hidden title="Share your recorded mix">⇪ Share mix</button>
       <button id="btn-pro" class="chip pro" title="Unlock unlimited high-bitrate recording">★ GO PRO</button>
     </div>
   </header>
+
+  <!-- ═══════════ FULL AUTO ═══════════ -->
+  <section id="full-auto-bar" aria-label="Full Auto DJ">
+    <button id="btn-full-auto" aria-pressed="false" title="Let the AI DJ your whole set, hands-free">
+      <span class="fa-icon" aria-hidden="true">🎧</span>
+      <span class="fa-text"><b>FULL AUTO</b><small>hands-free AI DJ — loads &amp; blends the library for you</small></span>
+      <span class="fa-state">OFF</span>
+    </button>
+    <div class="fa-interval" role="group" aria-label="Remix interval">
+      <span class="fa-int-label">Remix every</span>
+      <button class="fa-int" data-sec="5">5s</button>
+      <button class="fa-int" data-sec="10">10s</button>
+      <button class="fa-int" data-sec="30">30s</button>
+      <button class="fa-int" data-sec="60">1m</button>
+      <button class="fa-int" data-sec="120">2m</button>
+      <button class="fa-int" data-sec="180">3m</button>
+      <button class="fa-int" data-sec="0">song end</button>
+    </div>
+  </section>
 
   <main id="stage">
 
     <!-- ═══════════ DECK A ═══════════ -->
     <section class="deck" id="deckA" aria-label="Deck A">
+      <div class="deck-water" aria-hidden="true"></div>
+      <div class="deck-notes" aria-hidden="true"></div>
       <div class="deck-head">
         <span class="deck-tag">DECK A</span>
         <span class="deck-track">No record loaded</span>
+        <button class="btn-rand" title="Load a random record on deck A">🎲</button>
         <span class="deck-readout"><span class="bpm-val">—</span><small>BPM</small><span class="time-val">0:00 / 0:00</span></span>
       </div>
 
@@ -123,9 +146,12 @@
 
     <!-- ═══════════ DECK B ═══════════ -->
     <section class="deck deck-b" id="deckB" aria-label="Deck B">
+      <div class="deck-water" aria-hidden="true"></div>
+      <div class="deck-notes" aria-hidden="true"></div>
       <div class="deck-head">
         <span class="deck-tag">DECK B</span>
         <span class="deck-track">No record loaded</span>
+        <button class="btn-rand" title="Load a random record on deck B">🎲</button>
         <span class="deck-readout"><span class="bpm-val">—</span><small>BPM</small><span class="time-val">0:00 / 0:00</span></span>
       </div>
 
