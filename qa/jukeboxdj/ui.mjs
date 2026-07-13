@@ -25,13 +25,16 @@ await page.click("#deckA .btn-play");
 await page.waitForTimeout(800);
 const platter = page.locator("#deckA .platter");
 const box = await platter.boundingBox();
-const cx = box.x + box.width / 2, cy = box.y + box.height / 2, r = box.width * 0.36;
+// Only the TOP THIRD of the record is exposed (the rest slides behind the deck),
+// so scratch along the visible top arc rather than the (clipped) centre.
+const cx = box.x + box.width / 2, cy = box.y + box.height / 2, r = box.width * 0.42;
 const posBefore = await page.evaluate(() => window.__JB.decks.A.pos);
-// drag counter-clockwise (backwards) around the platter
-await page.mouse.move(cx + r, cy);
+// sweep counter-clockwise across the exposed top of the record (backwards)
+let a0 = -0.9;
+await page.mouse.move(cx + r * Math.cos(a0), cy + r * Math.sin(a0));
 await page.mouse.down();
 for (let i = 1; i <= 22; i++) {
-  const a = -i * 0.16; // negative sweep ≈ -3.5 rad
+  const a = a0 - i * 0.06; // stays on the top arc (visible band), sweeps CCW
   await page.mouse.move(cx + r * Math.cos(a), cy + r * Math.sin(a));
   await page.waitForTimeout(16);
 }

@@ -626,6 +626,7 @@ async function loadRandomToDeck (id, harmonicWith) {
    "song end" mode the end of the live track instead triggers the next blend. */
 function onDeckEnded (id) {
   const d = decks[id];
+  if (playlist.on && id === playlist.live && !playlist.mixing) { d.playing = false; ui.deckPlayChanged(id); playlistAdvance(); return; }
   if (fullAuto.on && fullAuto.intervalSec === 0) { d.playing = false; ui.deckPlayChanged(id); fullAutoTick(); return; }
   d.seek(0);
   d.playing = true;
@@ -674,6 +675,249 @@ function setupFullAuto () {
   }));
   mark();
 }
+/* ══════════════════════════ PLAYLIST AUTO-MIX ══════════════════════════════
+   The SECOND auto-mix mode. Where "Song Auto-Mix" blends the two records you've
+   loaded, Playlist Auto-Mix DJs your WHOLE library as one non-stop set: it plays
+   the live deck, silently pre-cues the next record on the idle deck (rate-matched
+   to the live tempo so the mix time & pitch are already measured), and when the
+   live track nears its end it beat-matches and crossfades in — then frees the old
+   deck and pre-cues the following record. It just keeps going. */
+const playlist = { on: false, queue: [], idx: 0, live: "A", cue: "B", timer: null, mixing: false, windowSec: 16 };
+
+function buildPlaylistQueue () {
+  const pool = library.filter((t) => t && t.buffer);
+  // light shuffle for variety without Math.random reliance quirks
+  const q = pool.slice();
+  for (let i = q.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = q[i]; q[i] = q[j]; q[j] = t; }
+  return q;
+}
+function playlistNext () {
+  if (!playlist.queue.length) return null;
+  playlist.idx = (playlist.idx + 1) % playlist.queue.length;
+  return playlist.queue[playlist.idx];
+}
+/* Silently ready a record on the idle deck: rate-match to the live tempo and park
+   it at the start (in headphones, so to speak — inaudible until we mix). */
+function preCue (cueId, liveId) {
+  const dCue = decks[cueId], dLive = decks[liveId];
+  if (!dCue || !dCue.track) return;
+  if (dLive && dLive.track && dLive.track.bpm && dCue.track.bpm) {
+    const r = clamp(dLive.effectiveBPM() / dCue.track.bpm, 0.7, 1.4);
+    dCue.setRate(r); reflectPitch(cueId);
+  }
+  dCue.seek(0);
+}
+function updatePlaylistStatus (rem) {
+  const el = $("#automix-status"); if (!el) return;
+  const lt = decks[playlist.live].track, ct = decks[playlist.cue].track;
+  el.textContent = "📻 Playlist Auto-Mix — ▶ " + (lt ? lt.name : "—") +
+    (ct ? "  ·  next: " + ct.name : "") +
+    (playlist.mixing ? "  · mixing…" : (rem != null ? "  · mix in " + Math.max(0, Math.round(rem - playlist.windowSec)) + "s" : ""));
+}
+async function playlistStart () {
+  await ensureAudio();
+  try { setFullAuto(false); } catch (e) {}
+  playlist.queue = buildPlaylistQueue();
+  if (playlist.queue.length < 2) { if (window.JBToast) window.JBToast("Add a couple more records for a playlist set."); return; }
+  playlist.on = true; playlist.mixing = false; playlist.idx = 0;
+  playlist.live = "A"; playlist.cue = "B";
+  document.body.classList.add("playlist-auto");
+  const btn = $("#btn-playlist-auto");
+  if (btn) { btn.classList.add("on"); btn.setAttribute("aria-pressed", "true"); const s = $(".pa-state", btn); if (s) s.textContent = "ON"; }
+  await loadToDeck("A", playlist.queue[0]);
+  await loadToDeck("B", playlist.queue[1]);
+  playlist.idx = 1;
+  setCrossfader(0);
+  if (!decks.A.playing) { decks.A.togglePlay(); ui.deckPlayChanged("A"); }
+  preCue("B", "A");
+  updatePlaylistStatus(decks.A.durSec() - decks.A.posSec());
+  clearInterval(playlist.timer);
+  playlist.timer = setInterval(playlistMonitor, 350);
+  if (window.JBToast) window.JBToast("📻 Playlist Auto-Mix started — non-stop set from your library.");
+}
+function playlistStop () {
+  playlist.on = false;
+  clearInterval(playlist.timer); playlist.timer = null;
+  document.body.classList.remove("playlist-auto");
+  const btn = $("#btn-playlist-auto");
+  if (btn) { btn.classList.remove("on"); btn.setAttribute("aria-pressed", "false"); const s = $(".pa-state", btn); if (s) s.textContent = "OFF"; }
+}
+function playlistMonitor () {
+  if (!playlist.on || playlist.mixing) return;
+  if (window.JBAutoMix && window.JBAutoMix.isRunning()) return;
+  const d = decks[playlist.live];
+  if (!d || !d.track || !d.playing) return;
+  const rem = d.durSec() - d.posSec();
+  updatePlaylistStatus(rem);
+  if (rem <= playlist.windowSec) playlistAdvance();
+}
+async function playlistAdvance () {
+  if (!playlist.on || playlist.mixing) return;
+  playlist.mixing = true;
+  const live = playlist.live, cue = playlist.cue;
+  try {
+    if (!decks[cue].track) { const t = playlistNext(); if (t) await loadToDeck(cue, t); }
+    preCue(cue, live);
+    // run the real AI transition (beat-match + crossfade live → cue)
+    if (window.JBAutoMix) { setCrossfader(live === "A" ? 0 : 1); await window.JBAutoMix.play(window.JBAutoMix.smartPick()); }
+    else { if (!decks[cue].playing) { decks[cue].togglePlay(); ui.deckPlayChanged(cue); } await rampCross(live, cue, 6000); }
+  } catch (e) { /* keep the set alive no matter what */ }
+  if (!playlist.on) { playlist.mixing = false; return; }
+  // swap roles: the deck we mixed into is now live
+  playlist.live = cue; playlist.cue = live;
+  const old = decks[live];
+  if (old.playing) { old.togglePlay(); ui.deckPlayChanged(live); }
+  const nt = playlistNext();
+  if (nt) { await loadToDeck(live, nt); preCue(live, playlist.live); }
+  playlist.mixing = false;
+}
+/* simple equal-power crossfade fallback if the AI mixer isn't present */
+function rampCross (from, to, ms) {
+  return new Promise((res) => {
+    const start = performance.now(), a = from === "A" ? 0 : 1, b = to === "A" ? 0 : 1;
+    (function step (now) {
+      const k = Math.min(1, (now - start) / ms);
+      setCrossfader(a + (b - a) * k);
+      if (k < 1 && playlist.on) requestAnimationFrame(step); else res();
+    })(start);
+  });
+}
+
+/* ═══════════════════════ PROMPT-CONTROLLED DJ CHAT ═════════════════════════
+   Type a plain-English set plan and the app performs it, e.g.
+     "mix first 13 seconds of track 1 and start on 50th second of track 3,
+      then play track 5 fully and at end gently mix in track 22 at second 33"
+   It parses each clause into a timed step (load a track → seek → play → mix)
+   and executes them in order on the two real decks. */
+const djScript = { running: false, cancel: false };
+
+// words → seconds ("13 seconds", "second 33", "fiftieth second", "1:20")
+const ORDINALS = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10,
+  eleventh: 11, twelfth: 12, thirteenth: 13, twentieth: 20, thirtieth: 30, fiftieth: 50 };
+function wordNum (w) {
+  if (w == null) return null;
+  w = String(w).trim().toLowerCase();
+  if (/^\d+(:\d+)?$/.test(w)) { if (w.indexOf(":") >= 0) { const p = w.split(":"); return (+p[0]) * 60 + (+p[1]); } return +w; }
+  if (ORDINALS[w] != null) return ORDINALS[w];
+  const m = w.match(/^(\d+)(st|nd|rd|th)$/); if (m) return +m[1];
+  return null;
+}
+/* Parse the natural-language set into an ordered list of steps. */
+function parseDjScript (text) {
+  const steps = [];
+  const lib = library.filter((t) => t && t.buffer);
+  // wrap out-of-range track numbers so every referenced record resolves even on
+  // a small demo library ("track 22" on a 9-record library → wraps around).
+  const trackByNum = (n) => { if (!lib.length) return null; const i = (((n - 1) % lib.length) + lib.length) % lib.length; return lib[i]; };
+  // split into one instruction per clause on then / , / ; / and / & / "and then".
+  // (each sub-instruction targets a single "track N", so "track 1 and start
+  //  track 3" must break into two steps.)
+  const clauses = text.replace(/\band then\b/gi, " then ")
+    .split(/\bthen\b|;|,|\band\b|&|\.(?=\s|$)/i)
+    .map((s) => s.trim()).filter(Boolean);
+  clauses.forEach((c) => {
+    const low = c.toLowerCase();
+    const tm = low.match(/track\s+(\d+)/);
+    if (!tm) return;
+    const trackNo = +tm[1];
+    const track = trackByNum(trackNo);
+    if (!track) return;
+    const gentle = /\bgent|\bsmooth|\bslow|\bease/.test(low);
+    const mix = /\bmix|\bblend|\bbring in|\btransition|\bcrossfade/.test(low);
+    // start-at: "start on 50th second", "at second 33", "start at 1:20", "on the fiftieth second"
+    let startAt = 0;
+    let sm = low.match(/(?:start(?:ing)?\s+(?:on|at)|begin(?:ning)?\s+(?:on|at)|from)\s+(?:the\s+)?([\w:]+)(?:\s*(?:st|nd|rd|th)?\s*(?:second|sec|s)\b)?/);
+    if (!sm) sm = low.match(/at\s+(?:the\s+)?(?:second\s+)?([\w:]+)(?:\s*(?:st|nd|rd|th)?\s*(?:second|sec|s)\b)?/);
+    if (sm) { const v = wordNum(sm[1]); if (v != null) startAt = v; }
+    // "at second 33" phrasing
+    const secAt = low.match(/\bat\s+second\s+([\w:]+)/) || low.match(/\bon\s+(?:the\s+)?([\w:]+)\s+second\b/);
+    if (secAt) { const v = wordNum(secAt[1]); if (v != null) startAt = v; }
+    // duration: "first 13 seconds", "play ... fully", "for 20 seconds"
+    let playFor = null, fully = /\bfull|\bwhole|\bentire|\bcomplete/.test(low);
+    // duration only from explicit "first N sec" / "for N sec" — never from a
+    // start phrase like "50th second of track 3" (that N is a position, not a length).
+    let dm = low.match(/first\s+([\w:]+)\s*(?:seconds?|secs?|s)\b/) || low.match(/for\s+([\w:]+)\s*(?:seconds?|secs?|s)\b/);
+    if (dm) { const v = wordNum(dm[1]); if (v != null) playFor = v; }
+    steps.push({ trackNo, track, startAt, playFor, fully, gentle, mix, text: c.trim() });
+  });
+  return steps;
+}
+async function runDjScript (text) {
+  if (djScript.running) { if (window.JBToast) window.JBToast("A set is already playing — stop it first."); return; }
+  await ensureAudio();
+  try { setFullAuto(false); } catch (e) {} playlistStop();
+  const steps = parseDjScript(text);
+  const out = $("#djchat-log");
+  if (!steps.length) { if (out) out.textContent = "Couldn't find any \"track N\" steps in that. Try: “mix first 13s of track 1, then start track 3 at second 50”."; return; }
+  djScript.running = true; djScript.cancel = false;
+  document.body.classList.add("dj-script");
+  const echo = (m) => { if (out) out.textContent = m; if (window.JBToast) window.JBToast(m); };
+  echo("🎛 Running your set — " + steps.length + " step" + (steps.length > 1 ? "s" : "") + "…");
+  let live = "A", first = true;
+  for (let s = 0; s < steps.length; s++) {
+    if (djScript.cancel) break;
+    const st = steps[s];
+    const cue = live === "A" ? "B" : "A";
+    const target = first ? live : cue;
+    await loadToDeck(target, st.track);
+    const d = decks[target];
+    const sr = d.track.buffer.sampleRate;
+    d.seek(Math.min(st.startAt * sr, Math.max(0, d.track.buffer.length - sr)));
+    if (first) {
+      setCrossfader(target === "A" ? 0 : 1);
+      if (!d.playing) { d.togglePlay(); ui.deckPlayChanged(target); }
+      echo("▶ Track " + st.trackNo + " — “" + st.track.name + "”" + (st.startAt ? " from " + fmtTime(st.startAt) : ""));
+      first = false;
+    } else {
+      // mix from the live deck into this one
+      if (!d.playing) { d.togglePlay(); ui.deckPlayChanged(target); }
+      echo((st.gentle ? "🎚 Gently mixing" : "⇢ Mixing") + " into track " + st.trackNo + " — “" + st.track.name + "”");
+      if (window.JBAutoMix) { await window.JBAutoMix.play(window.JBAutoMix.smartPick()); }
+      else { await rampCrossFree(live, target, st.gentle ? 8000 : 4000); }
+      live = target;
+    }
+    // hold for the requested play window before advancing
+    const holdSec = st.fully ? Math.max(0, d.durSec() - st.startAt) : (st.playFor != null ? st.playFor : 12);
+    await djWait(holdSec * 1000, target);
+  }
+  if (!djScript.cancel) echo("✓ Set complete.");
+  djScript.running = false;
+  document.body.classList.remove("dj-script");
+}
+function rampCrossFree (from, to, ms) { return rampCross(from, to, ms); }
+function djWait (ms, deckId) {
+  return new Promise((res) => {
+    const t0 = performance.now();
+    (function step () {
+      if (djScript.cancel) return res();
+      const d = decks[deckId];
+      const ended = d && d.track && d.atEnd && d.atEnd();
+      if (performance.now() - t0 >= ms || ended) return res();
+      setTimeout(step, 120);
+    })();
+  });
+}
+function stopDjScript () { djScript.cancel = true; djScript.running = false; document.body.classList.remove("dj-script"); }
+
+function setupMixModes () {
+  const song = $("#btn-mix-song"), pl = $("#btn-playlist-auto");
+  if (song) song.addEventListener("click", async () => {
+    await ensureAudio();
+    playlistStop(); try { setFullAuto(false); } catch (e) {}
+    if (!decks.A.track) await loadRandomToDeck("A");
+    if (!decks.B.track) await loadRandomToDeck("B", decks.A.track);
+    if (!decks.A.playing && !decks.B.playing) { decks.A.togglePlay(); ui.deckPlayChanged("A"); setCrossfader(0); }
+    if (window.JBAutoMix) window.JBAutoMix.play(window.JBAutoMix.smartPick());
+  });
+  if (pl) pl.addEventListener("click", () => { if (playlist.on) playlistStop(); else playlistStart(); });
+  // prompt chatbot
+  const send = $("#djchat-send"), input = $("#djchat-input");
+  const fire = () => { const v = input ? input.value.trim() : ""; if (v) runDjScript(v); };
+  if (send) send.addEventListener("click", fire);
+  if (input) input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); fire(); } });
+  document.querySelectorAll(".djchat-ex").forEach((b) => b.addEventListener("click", () => { if (input) { input.value = b.dataset.ex || b.textContent; input.focus(); } }));
+}
+
 function setupRandomLoad () {
   ["A", "B"].forEach((id) => {
     const btn = $(".btn-rand", deckEls(id).root);
@@ -867,7 +1111,9 @@ function deckEls (id) {
     platter: $(".platter", root),
     disc: $(".disc", root),
     label: $(".disc-label", root),
-    arm: $(".tonearm", root),
+    needle: $(".needle", root),
+    vtCur: $(".vt-cur", root),
+    vtRem: $(".vt-rem", root),
     play: $(".btn-play", root),
     cue: $(".btn-cue", root),
     sync: $(".btn-sync", root),
@@ -1112,6 +1358,8 @@ function setupMixer () {
 function stopAll () {
   try { if (window.JBAutoMix && window.JBAutoMix.isRunning && window.JBAutoMix.isRunning()) window.JBAutoMix.stop(); } catch (e) {}
   try { setFullAuto(false); } catch (e) {}
+  try { playlistStop(); } catch (e) {}
+  try { stopDjScript(); } catch (e) {}
   ["A", "B"].forEach((id) => { const d = decks[id]; if (d && d.playing) { d.togglePlay(); ui.deckPlayChanged(id); } });
   if (window.JBToast) window.JBToast("■ Stopped all decks.");
 }
@@ -1169,6 +1417,7 @@ async function loadToDeck (id, track) {
   const d = decks[id];
   const wasDefaultRate = !d.track;
   d.load(track);
+  d._lastCurSec = d._lastRemSec = -1;   // force the time runner to repaint for the new track
   d.setRate(1 + Number(deckEls(id).pitch.value) / 1000);
   const el = deckEls(id);
   el.title.textContent = track.name;
@@ -1364,9 +1613,24 @@ function tick () {
       // platter angle tracks the actual audio position — scratching moves it.
       const angle = (d.posSec() / VINYL_SEC_PER_REV) * 360;
       el.disc.style.transform = "rotate(" + (angle % 360) + "deg)";
-      const frac = d.pos / d.track.buffer.length;
-      el.arm.style.transform = "rotate(" + (14 + frac * 24) + "deg)";
-      el.time.textContent = fmtTime(d.posSec()) + " / " + fmtTime(d.durSec());
+      const frac = Math.max(0, Math.min(1, d.pos / d.track.buffer.length));
+      // Needle rides from the outer rim (start) toward the spindle (end) across
+      // the exposed top third of the record. left: 8%→92% tracks progress.
+      if (el.needle) {
+        el.needle.style.left = (8 + frac * 84).toFixed(2) + "%";
+        el.needle.classList.toggle("flip", frac > 0.5);
+      }
+      // time runner: only rewrite the DOM when the whole-second value actually
+      // changes (≈1×/s), not every animation frame — avoids needless per-frame
+      // string allocation + layout churn.
+      const cur = d.posSec(), dur = d.durSec(), rem = Math.max(0, dur - cur);
+      const cs = cur | 0, rs = rem | 0;
+      if (cs !== d._lastCurSec || rs !== d._lastRemSec) {
+        d._lastCurSec = cs; d._lastRemSec = rs;
+        if (el.vtCur) el.vtCur.textContent = fmtTime(cur);
+        if (el.vtRem) el.vtRem.textContent = "-" + fmtTime(rem);
+        el.time.textContent = fmtTime(cur) + " / " + fmtTime(dur);
+      }
       const eb = d.effectiveBPM();
       el.bpm.textContent = eb ? eb.toFixed(1) : "—";
       drawWave(id);
@@ -1430,6 +1694,7 @@ async function boot () {
   setupScratchPads();
   setupMixNotes();
   setupFullAuto();
+  setupMixModes();
   setupRandomLoad();
   setupShare();
   setupHotcues();
@@ -1444,6 +1709,9 @@ async function boot () {
     playScratch, scratchFx: SCRATCH_FX,
     // FULL AUTO + random load + share (also handy for QA)
     setFullAuto, fullAuto, loadRandomToDeck, onDeckEnded,
+    // playlist auto-mix + prompt-controlled DJ chat
+    playlist, playlistStart, playlistStop, playlistAdvance,
+    parseDjScript, runDjScript, stopDjScript, djScript,
     // hot cues + harmonic key detection
     estimateKey, trackKey, keysCompatible, refreshDeckKey, refreshHotcues,
     stopAll, applyBand

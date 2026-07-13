@@ -667,6 +667,108 @@ body.beating .btn-play.on,body.beating #btn-full-auto.on{
 .fx-pad{min-width:0;padding:8px 12px;font-size:12px}
 @media (max-width:640px){ .fx-pad{padding:7px 11px;font-size:11.5px} }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   v3 — big vinyl, top-third exposed (record slides behind the deck below it),
+   a needle head that rides the record with a current/remaining time runner,
+   and EQ sliders shrunk to ~20% of their old footprint.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* The record is now LARGE but we only expose its top third — the rest reads as
+   if it slid behind the panel below. .deck-vinyl is that clipping window. */
+.deck-vinyl{position:relative;height:clamp(74px,20vw,104px);overflow:hidden;
+  border-radius:13px 13px 8px 8px;margin:1px 0 3px;
+  background:radial-gradient(120% 220% at 50% 118%,rgba(60,52,110,.35),rgba(10,8,24,.85));
+  border:1px solid var(--border);box-shadow:inset 0 -10px 22px rgba(0,0,0,.55);z-index:2}
+/* big platter, anchored by its top edge so ~top third shows; sides clip too */
+.deck-vinyl .platter{position:absolute!important;left:50%;top:6px;transform:translateX(-50%);
+  width:min(300px,66vw)!important;max-width:none!important}
+.deck-vinyl .strobe{opacity:.5}
+/* subtle lip where the record disappears behind the deck */
+.deck-vinyl::after{content:"";position:absolute;left:0;right:0;bottom:0;height:14px;
+  background:linear-gradient(180deg,transparent,rgba(8,6,20,.9));pointer-events:none;z-index:4}
+
+/* needle head: a marker that rides left→right across the exposed record as the
+   track progresses, carrying the running current / remaining timestamps. */
+.needle{position:absolute;top:0;bottom:0;left:8%;width:2px;z-index:6;pointer-events:none;
+  background:linear-gradient(180deg,rgba(251,113,133,.95),rgba(251,113,133,.15));
+  box-shadow:0 0 6px rgba(251,113,133,.7);transition:left .12s linear}
+.needle::before{content:"";position:absolute;top:-3px;left:-6px;width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#fff,#FB7185 55%,#9F1239);
+  box-shadow:0 0 10px rgba(251,113,133,.85),0 1px 3px rgba(0,0,0,.6)}
+.ndl-time{position:absolute;top:11px;left:7px;display:flex;flex-direction:column;gap:0;
+  font-style:normal;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap;
+  text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.ndl-time .vt-cur{font-size:11px;font-weight:900;color:#fff}
+.ndl-time .vt-rem{font-size:9px;font-weight:700;color:#FCA5B4}
+/* when the needle is past mid-track, throw the label to the LEFT so it never
+   runs off the right edge (JS toggles .flip). */
+.needle.flip .ndl-time{left:auto;right:7px;text-align:right;align-items:flex-end}
+
+/* deck-readout sits under the vinyl window now */
+.deck-vinyl .deck-readout{position:absolute;right:7px;bottom:2px;z-index:5;gap:3px;font-size:11px}
+.deck-vinyl .deck-readout small{font-size:8px}
+.deck-vinyl .deck-readout .time-val{display:none}     /* redundant — runner shows it */
+
+/* EQ / pitch / volume sliders → ~20% of the old footprint: a tight 2-col grid
+   of short rows with slim thumbs (still draggable, just far more compact). */
+.deck-eq{display:grid!important;grid-template-columns:1fr 1fr;gap:3px 8px;flex-direction:unset}
+.deck-eq .sl{height:16px;gap:5px}
+.deck-eq .sl > span{width:34px;font-size:7.5px;letter-spacing:.03em}
+.deck-eq input[type=range]{height:16px!important}
+.deck-eq input[type=range]::-webkit-slider-runnable-track{height:4px}
+.deck-eq input[type=range]::-webkit-slider-thumb{width:14px;height:14px;margin-top:-5px;border-radius:5px}
+.deck-eq input[type=range]::-moz-range-track{height:4px}
+.deck-eq input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:5px}
+.deck-eq .sl:has(.pitch){grid-column:1 / -1}         /* pitch spans full width */
+
+@media (max-width:640px){
+  .deck-vinyl{height:clamp(64px,22vw,92px)}
+  .deck-vinyl .platter{width:min(240px,72vw)!important;top:5px}
+  /* one full-width column per deck: short but easy to grab with a thumb */
+  .deck-eq{grid-template-columns:1fr!important}
+  .deck-eq .sl:has(.pitch){grid-column:auto}
+  .deck-eq .sl > span{width:44px;font-size:8px}
+  .deck-eq input[type=range]::-webkit-slider-thumb{width:18px;height:18px;margin-top:-7px}
+  .ndl-time .vt-cur{font-size:10px}
+}
+
+/* ── two auto-mix modes ── */
+.am-modes{display:flex;gap:10px;flex-wrap:wrap}
+.am-modes button{flex:1;min-width:200px;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:13px;
+  background:linear-gradient(135deg,rgba(167,139,250,.16),rgba(94,234,212,.1));border:1px solid var(--border-lt);
+  color:var(--text);text-align:left;transition:all .16s;cursor:pointer}
+.am-modes button:hover{box-shadow:0 0 18px rgba(167,139,250,.35);border-color:var(--iris)}
+.am-modes .amm-ic{font-size:22px;flex:none}
+.am-modes .amm-txt{display:flex;flex-direction:column;line-height:1.2}
+.am-modes .amm-txt b{font-size:13.5px;font-weight:900;letter-spacing:.03em}
+.am-modes .amm-txt small{color:var(--muted);font-size:10.5px}
+.pa-state{margin-left:auto;font-size:11px;font-weight:900;letter-spacing:.08em;color:var(--faint);
+  border:1px solid var(--border-lt);border-radius:7px;padding:2px 8px}
+#btn-playlist-auto.on{background:linear-gradient(135deg,var(--iris),var(--teal));color:#08081A;border-color:transparent}
+#btn-playlist-auto.on .amm-txt small{color:rgba(8,8,26,.7)}
+#btn-playlist-auto.on .pa-state{color:#08081A;border-color:rgba(8,8,26,.4)}
+body.playlist-auto #controls-panel{border-color:var(--aurora);box-shadow:0 0 26px rgba(94,234,212,.28)}
+
+/* ── prompt-controlled DJ chat ── */
+#djchat{background:linear-gradient(180deg,rgba(20,17,40,.55),rgba(12,10,28,.4));border:1px solid var(--border);
+  border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:8px}
+.djchat-head{font-size:12.5px;color:var(--muted)}
+.djchat-head b{color:var(--iris-lt);font-size:13px}
+.djchat-row{display:flex;gap:8px;flex-wrap:wrap}
+#djchat-input{flex:1;min-width:180px;padding:11px 13px;border-radius:11px;font-size:13px;
+  background:rgba(8,6,20,.7);border:1px solid var(--border-lt);color:var(--text)}
+#djchat-input:focus{outline:none;border-color:var(--iris);box-shadow:0 0 0 2px rgba(167,139,250,.25)}
+#djchat-send{flex:none;padding:0 16px;min-height:44px;border-radius:11px;font-weight:900;font-size:13px;letter-spacing:.03em;
+  background:linear-gradient(135deg,var(--iris),var(--teal));color:#08081A;cursor:pointer;transition:all .16s}
+#djchat-send:hover{box-shadow:0 0 16px rgba(167,139,250,.5)}
+.djchat-exs{display:flex;gap:6px;flex-wrap:wrap}
+.djchat-ex{padding:5px 10px;font-size:11px;border-radius:8px;background:rgba(167,139,250,.12);
+  border:1px solid var(--border-lt);color:var(--iris-lt);cursor:pointer}
+.djchat-ex:hover{background:rgba(167,139,250,.24)}
+#djchat-log{font-size:12px;color:var(--aurora);min-height:16px;font-variant-numeric:tabular-nums}
+body.dj-script #djchat{border-color:var(--iris);box-shadow:0 0 20px rgba(167,139,250,.3)}
+@media (max-width:640px){ #djchat-send{width:100%} .am-modes button{min-width:100%} }
+
 /* ── Pro / paywall additions ── */
 .pro-trial{border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:12px;line-height:1.5}
 .pro-trial.ok{background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.4);color:var(--aurora)}

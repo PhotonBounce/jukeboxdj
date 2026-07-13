@@ -48,16 +48,16 @@
           <span class="deck-key" title="Musical key · Camelot code">—</span>
           <button class="btn-rand" title="Load a random record">🎲</button>
         </div>
-        <div class="deck-top">
-          <div class="platter" title="Grab the record to scratch">
+        <div class="deck-vinyl" title="Grab the record to scratch">
+          <div class="platter">
             <div class="strobe" aria-hidden="true"></div>
             <div class="disc">
               <div class="grooves"></div>
               <div class="disc-label" style="--c:#A78BFA"><b>Load</b><i></i></div>
               <div class="spindle"></div>
             </div>
-            <div class="tonearm" aria-hidden="true"><div class="arm-base"></div><div class="arm-rod"></div><div class="arm-head"></div></div>
           </div>
+          <div class="needle" aria-hidden="true"><i class="ndl-time"><b class="vt-cur">0:00</b><b class="vt-rem">-0:00</b></i></div>
           <span class="deck-readout"><span class="bpm-val">—</span><small>BPM</small><span class="time-val">0:00 / 0:00</span></span>
         </div>
         <canvas class="wave" aria-label="Deck A waveform — click to seek"></canvas>
@@ -97,16 +97,16 @@
           <span class="deck-key" title="Musical key · Camelot code">—</span>
           <button class="btn-rand" title="Load a random record">🎲</button>
         </div>
-        <div class="deck-top">
-          <div class="platter" title="Grab the record to scratch">
+        <div class="deck-vinyl" title="Grab the record to scratch">
+          <div class="platter">
             <div class="strobe" aria-hidden="true"></div>
             <div class="disc">
               <div class="grooves"></div>
               <div class="disc-label" style="--c:#7DD3FC"><b>Load</b><i></i></div>
               <div class="spindle"></div>
             </div>
-            <div class="tonearm" aria-hidden="true"><div class="arm-base"></div><div class="arm-rod"></div><div class="arm-head"></div></div>
           </div>
+          <div class="needle" aria-hidden="true"><i class="ndl-time"><b class="vt-cur">0:00</b><b class="vt-rem">-0:00</b></i></div>
           <span class="deck-readout"><span class="bpm-val">—</span><small>BPM</small><span class="time-val">0:00 / 0:00</span></span>
         </div>
         <canvas class="wave" aria-label="Deck B waveform — click to seek"></canvas>
@@ -176,6 +176,19 @@
       <button id="btn-stop-all" title="Stop everything — decks, Auto-Mix and Full Auto">⏹ STOP ALL</button>
     </div>
 
+    <!-- TWO auto-mix modes: Song (the two decks) vs Playlist (the whole library) -->
+    <div class="am-modes" role="group" aria-label="Auto-mix mode">
+      <button id="btn-mix-song" title="Beat-match &amp; blend the two records on the decks (key: M)">
+        <span class="amm-ic" aria-hidden="true">🎚</span>
+        <span class="amm-txt"><b>SONG AUTO-MIX</b><small>blend the two decks</small></span>
+      </button>
+      <button id="btn-playlist-auto" aria-pressed="false" title="Non-stop AI set — DJs your whole library, pre-cueing &amp; mixing each record">
+        <span class="amm-ic" aria-hidden="true">📻</span>
+        <span class="amm-txt"><b>PLAYLIST AUTO-MIX</b><small>non-stop set from your library</small></span>
+        <span class="pa-state">OFF</span>
+      </button>
+    </div>
+
     <div class="ctl-actions">
       <button id="btn-automix" title="AI blends the two decks once (key: M)">🤖 Auto-Mix once</button>
       <label class="am-rec"><input type="checkbox" id="automix-rec"> Record the mix</label>
@@ -183,6 +196,22 @@
         <span class="rs-dot"></span><span class="rs-label">Record Session</span>
       </button>
       <span id="automix-status">Load A &amp; B, then let the AI beat-match and blend them.</span>
+    </div>
+
+    <!-- prompt-controlled DJ: type a plain-English set and it performs it -->
+    <div id="djchat" aria-label="Prompt-controlled DJ">
+      <div class="djchat-head">🎙 <b>DJ by prompt</b> <small>— tell it a set in plain English</small></div>
+      <div class="djchat-row">
+        <input id="djchat-input" type="text" autocomplete="off"
+          placeholder="e.g. mix first 13s of track 1, then start track 3 at second 50, play track 5 fully…">
+        <button id="djchat-send">▶ Play set</button>
+      </div>
+      <div class="djchat-exs">
+        <button class="djchat-ex" data-ex="mix first 13 seconds of track 1 and start on 50th second of track 3, then play track 5 fully and at end gently mix in track 22 at second 33">try the example</button>
+        <button class="djchat-ex" data-ex="play track 2 fully then gently mix in track 4">play 2 then blend 4</button>
+        <button class="djchat-ex" data-ex="mix first 20 seconds of track 1 then start track 6 at second 15">quick 20s intro</button>
+      </div>
+      <div id="djchat-log" aria-live="polite"></div>
     </div>
 
     <div id="automix-grid" aria-label="Auto-mix styles"></div>

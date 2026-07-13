@@ -72,6 +72,21 @@ ok("recording still rolling past the free cap (Pro)", health.recOn && /^[2-9]:/.
 
 await page.click("#btn-rec");
 await page.waitForFunction(() => !document.querySelector("#rec-save").hidden, null, { timeout: 10000 });
+
+// Sample the heap HERE — right after the recording stops but BEFORE the decode
+// check below. Decoding a 150s stereo take allocates a ~50 MB AudioBuffer that is
+// the *test's* cost, not the app's; measuring after it would falsely blame the
+// soak. (Verified: the unmodified baseline reads the same ~138 MB when sampled
+// post-decode.) This measures the app's real soak growth: working set + the
+// recorded blob + any leak.
+const heap1 = await page.evaluate(() => (performance.memory ? performance.memory.usedJSHeapSize : 0));
+if (heap0 && heap1) {
+  const growth = (heap1 - heap0) / 1048576;
+  ok("JS heap growth bounded (<120 MB over soak)", growth < 120, growth.toFixed(1) + " MB");
+} else {
+  ok("JS heap metric unavailable — skipped", true);
+}
+
 const rec = await page.evaluate(async () => {
   const buf = await fetch(document.querySelector("#rec-save").href).then((r) => r.arrayBuffer());
   const audio = await window.__JB.ctx().decodeAudioData(buf.slice(0));
@@ -81,14 +96,6 @@ const rec = await page.evaluate(async () => {
 });
 ok("soak recording decodes at full length (>140s)", rec.dur > 140, rec.dur.toFixed(1) + "s / " + rec.bytes + " bytes");
 ok("soak recording is audible", rec.rms > 0.01, "rms=" + rec.rms.toFixed(3));
-
-const heap1 = await page.evaluate(() => (performance.memory ? performance.memory.usedJSHeapSize : 0));
-if (heap0 && heap1) {
-  const growth = (heap1 - heap0) / 1048576;
-  ok("JS heap growth bounded (<120 MB over soak)", growth < 120, growth.toFixed(1) + " MB");
-} else {
-  ok("JS heap metric unavailable — skipped", true);
-}
 ok("no page errors during soak", errors.length === 0, errors.slice(0, 3).join(" | "));
 
 await browser.close();

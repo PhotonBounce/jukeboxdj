@@ -69,10 +69,16 @@ await deny.addInitScript(() => {
 });
 await deny.goto(base + "/app.html");
 await deny.waitForSelector("body.booted", { timeout: 20000 });
-const denyState = await deny.evaluate(() => ({
-  jb: !!window.__JB, pro: window.JBPro.isPro(), limit: window.JBPro.recLimitSec()
-}));
-ok("localStorage denied: app boots on free tier", denyState.jb && denyState.pro === false && denyState.limit === 90, JSON.stringify(denyState));
+const denyState = await deny.evaluate(() => {
+  const l = window.JBPro.recLimitSec();
+  return { jb: !!window.__JB, pro: window.JBPro.isPro(), limitStr: (l === Infinity ? "Infinity" : String(l)) };
+});
+// storage denied (private mode): the trial clock can't persist, so the app can't
+// be Pro and degrades to trial (unlimited) or the post-trial 90s cap — never Pro,
+// never a crash. (JSON can't carry Infinity, hence the string.)
+ok("localStorage denied: app boots, not Pro, no crash",
+  denyState.jb && denyState.pro === false && (denyState.limitStr === "90" || denyState.limitStr === "Infinity" || denyState.limitStr === "null"),
+  JSON.stringify(denyState));
 const denyUnlock = await deny.evaluate(() => {
   window.JBPro.unlock("qa");          // save will fail silently…
   return window.JBPro.isPro();        // …but the session unlock still applies

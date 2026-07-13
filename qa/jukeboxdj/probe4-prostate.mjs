@@ -27,11 +27,13 @@ for (const [label, value] of [
   const errs = [];
   p.on("pageerror", (e) => errs.push(String(e)));
   await p.goto(base + "/app.html");
-  await p.evaluate((v) => { localStorage.setItem("jbdj.pro.v1", v); }, value);
+  await p.evaluate((v) => { localStorage.setItem("jbdj.pro.v2", v); }, value);
   await p.reload();
   await p.waitForSelector("body.booted", { timeout: 20000 });
   const st = await p.evaluate(() => ({ pro: window.JBPro.isPro(), limit: window.JBPro.recLimitSec() }));
-  ok(`tamper[${label}] → free tier, no crash`, st.pro === false && st.limit === 90 && errs.length === 0,
+  // trial model: garbage state must never grant Pro and must never crash; it may
+  // fall back to a fresh trial (unlimited) or the post-trial 90s cap — both fine.
+  ok(`tamper[${label}] → not Pro, no crash`, st.pro === false && errs.length === 0,
     JSON.stringify(st) + (errs.length ? " ERR:" + errs[0] : ""));
   await ctx.close();
 }
@@ -47,7 +49,7 @@ await page.waitForSelector("body.booted", { timeout: 20000 });
 await page.evaluate(() => {
   for (let i = 0; i < 30; i++) {
     window.JBPro.unlock("spam");
-    localStorage.removeItem("jbdj.pro.v1");
+    localStorage.removeItem("jbdj.pro.v2");
     window.JBPro.openPanel();
     window.JBPro.closePanel();
   }
