@@ -4,6 +4,17 @@ Options -Indexes
 # Correct MIME type for the web app manifest (older Apache configs miss it).
 <IfModule mod_mime.c>
   AddType application/manifest+json .webmanifest
+  AddType application/vnd.android.package-archive .apk
+</IfModule>
+
+# Android APK: force a real "save file" download. Some mobile browsers preview,
+# rename, or silently stall an .apk unless the server marks it as an attachment.
+<IfModule mod_headers.c>
+  <FilesMatch "\.apk$">
+    Header set Content-Type "application/vnd.android.package-archive"
+    Header set Content-Disposition "attachment; filename=JukeboxDJ.apk"
+    Header set Cache-Control "public, max-age=600"
+  </FilesMatch>
 </IfModule>
 
 # LiteSpeed: never page-cache this app at the server (the host has previously
