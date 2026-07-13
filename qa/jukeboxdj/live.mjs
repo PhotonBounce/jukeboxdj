@@ -78,14 +78,16 @@ const live = await page.evaluate(() => new Promise((res) => {
 }));
 ok("live deck plays audio", live.rms > 0.01 && live.pos > 0, "rms=" + live.rms.toFixed(4));
 
-// scratch on the live site
+// scratch on the live site — only the top third of the record is exposed now,
+// so grab the visible top arc rather than the (clipped) centre.
 const box = await page.locator("#deckA .platter").boundingBox();
-const cx = box.x + box.width / 2, cy = box.y + box.height / 2, r = box.width * 0.36;
+const cx = box.x + box.width / 2, cy = box.y + box.height / 2, r = box.width * 0.42;
 const p0 = await page.evaluate(() => window.__JB.decks.A.pos);
-await page.mouse.move(cx + r, cy);
+let a0 = -0.9;
+await page.mouse.move(cx + r * Math.cos(a0), cy + r * Math.sin(a0));
 await page.mouse.down();
-for (let i = 1; i <= 18; i++) {
-  const a = -i * 0.18;
+for (let i = 1; i <= 22; i++) {
+  const a = a0 - i * 0.06;   // sweep CCW across the exposed top arc (backwards)
   await page.mouse.move(cx + r * Math.cos(a), cy + r * Math.sin(a));
   await page.waitForTimeout(16);
 }
