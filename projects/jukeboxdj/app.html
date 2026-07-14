@@ -250,15 +250,33 @@
 <script src="jukebox-pro.js"></script>
 <script>
 document.getElementById("yr").textContent = new Date().getFullYear();
-if ("serviceWorker" in navigator && location.protocol === "https:") {
-  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
-    reg.update();
-    var reloaded = false;
-    navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (reloaded) return; reloaded = true;
-      if (navigator.serviceWorker.controller) location.reload();
-    });
-  }).catch(function () {});
+// In-app = the Android WebView shell. It serves the bundle through
+// WebViewAssetLoader on https://appassets.androidplatform.net — which IS an
+// https origin, so a bare `protocol === "https:"` check would wrongly register
+// the service worker there. A worker on that origin bypasses the asset loader,
+// so its fetches fail and the decks/library/auto-mix all die on the next launch
+// ("most experiments don't work in the APK"). Never register in-app — and heal
+// any worker/caches a previous build may have left behind on this origin.
+var IN_APP = /JukeboxDJApp/.test(navigator.userAgent) ||
+             location.hostname === "appassets.androidplatform.net";
+if ("serviceWorker" in navigator) {
+  if (IN_APP) {
+    navigator.serviceWorker.getRegistrations().then(function (rs) {
+      rs.forEach(function (r) { r.unregister(); });
+    }).catch(function () {});
+    if (window.caches && caches.keys) caches.keys().then(function (ks) {
+      ks.forEach(function (k) { caches.delete(k); });
+    }).catch(function () {});
+  } else if (location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+      reg.update();
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (reloaded) return; reloaded = true;
+        if (navigator.serviceWorker.controller) location.reload();
+      });
+    }).catch(function () {});
+  }
 }
 </script>
 </body>
