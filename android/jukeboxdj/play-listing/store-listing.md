@@ -26,12 +26,12 @@ Two real turntables in your pocket. Scratch the vinyl, mix, loop and record.
 ```
 JukeboxDJ is a real DJ rig in your pocket — two working turntables you can actually scratch, a full mixer, and a jukebox of tracks ready to spin. No account, no ads, works fully offline.
 
-Grab the record and the sound follows your hand: scratches, spinbacks and reverse are driven by a real vinyl engine, not a fake animation. Each deck is a 3D turntable tilted like it's sitting on a table in front of you — you see the whole record spin, the label and track name in the middle, and a tonearm with a diamond stylus that rides toward the centre as the track plays. Let go and the platter spins back up like real wax.
+Grab the record and the sound follows your hand: scratches, spinbacks and reverse are driven by a real vinyl engine, not a fake animation. Each deck is a top-down turntable — you see the whole record spin flat in front of you, the label and track name clear in the middle, and a tonearm with a diamond stylus that rides toward the centre as the track plays. Let go and the platter spins back up like real wax.
 
 Everything fits on one screen — no scrolling. Both turntables, the knobs and the jukebox are all in view at once, on any phone.
 
 WHAT YOU CAN DO
-• Two 3D turntables — the whole tilted record with its centre label + track name, a tonearm + diamond stylus, live current/remaining time, real-time BPM, cue and one-tap Sync
+• Two top-down turntables — the whole record with its clear centre label + track name, a tonearm + diamond stylus, live current/remaining time, real-time BPM, cue and one-tap Sync
 • Scratch for real — drag the vinyl to scratch, nudge, rip it backwards, drop it on the beat
 • Hands-on knobs — pitch, 3-band EQ (bass/mid/treble), a sweep filter and volume as chunky rotary knobs you twist with your thumb (double-tap to recentre)
 • Two auto-mix modes — Song Auto-Mix beat-matches and blends the two decks; Playlist Auto-Mix DJs your whole library non-stop, silently pre-cueing and beat-matching the next record and crossfading on its own
