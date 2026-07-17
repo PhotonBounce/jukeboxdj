@@ -827,17 +827,27 @@ html,body{height:100%;margin:0;overflow:hidden}
 .tt3d .spindle{position:absolute;top:50%;left:50%;width:5%;height:5%;transform:translate(-50%,-50%);border-radius:50%;
   background:radial-gradient(circle,#e8e8f2,#8b8ba0);box-shadow:0 0 0 2px rgba(0,0,0,.4)}
 
-/* tonearm + diamond stylus — rides from the rim toward the label as the track plays */
-.tonearm{position:absolute;top:2%;right:1%;width:54%;height:54%;transform-origin:90% 10%;
-  transform:rotate(18deg);transition:transform .25s ease;pointer-events:none;z-index:6}
-.tonearm .arm{position:absolute;top:8%;right:10%;width:8%;height:74%;border-radius:4px;
-  background:linear-gradient(180deg,#d9d9e6,#9a9ab0);box-shadow:0 1px 3px rgba(0,0,0,.5);transform-origin:top}
-.tonearm .head{position:absolute;bottom:14%;left:6%;width:20%;height:15%;border-radius:3px;
-  background:linear-gradient(180deg,#2b2b3a,#14141e);border:1px solid rgba(255,255,255,.18)}
-.tonearm .head .stylus{position:absolute;bottom:-42%;left:50%;width:34%;aspect-ratio:1;transform:translateX(-50%) rotate(45deg);
-  background:linear-gradient(135deg,#fff,#8ee9ff 60%,#5eead4);box-shadow:0 0 8px rgba(94,234,212,.9)}
-.tonearm::before{content:"";position:absolute;top:2%;right:6%;width:16%;aspect-ratio:1;border-radius:50%;
-  background:radial-gradient(circle at 40% 35%,#3a3a4e,#15151f);border:1px solid rgba(255,255,255,.15)}
+/* tonearm — a slim column that pivots from a mount at the top; the headshell and
+   a glowing diamond stylus sit at the FAR end, resting on the record. The whole
+   arm swings toward the label as the track plays (tick rotates it). */
+.tonearm{position:absolute;top:-6%;right:12%;width:11%;height:66%;transform-origin:50% 7%;
+  transform:rotate(20deg);transition:transform .25s ease;pointer-events:none;z-index:8}
+/* pivot mount at the top of the arm */
+.tonearm::before{content:"";position:absolute;top:-6%;left:50%;transform:translateX(-50%);
+  width:190%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#54506e,#15151f);border:1px solid rgba(255,255,255,.22);box-shadow:0 1px 4px rgba(0,0,0,.6)}
+/* the arm tube running down the column */
+.tonearm .arm{position:absolute;top:6%;left:50%;transform:translateX(-50%);width:34%;height:80%;border-radius:5px;
+  background:linear-gradient(90deg,#8f8fa6,#eeeef6 45%,#8f8fa6);box-shadow:0 1px 3px rgba(0,0,0,.55)}
+/* the headshell block at the far (record) end */
+.tonearm .head{position:absolute;bottom:-8%;left:50%;transform:translateX(-50%) rotate(-14deg);
+  width:150%;height:20%;border-radius:3px;background:linear-gradient(180deg,#3a3a52,#111119);
+  border:1px solid rgba(255,255,255,.3);box-shadow:0 2px 6px rgba(0,0,0,.7)}
+/* the diamond stylus poking out of the headshell onto the groove */
+.tonearm .head .stylus{position:absolute;bottom:-70%;left:50%;transform:translateX(-50%) rotate(45deg);
+  width:62%;aspect-ratio:1;border-radius:2px;
+  background:linear-gradient(135deg,#ffffff,#8ee9ff 50%,#5eead4);
+  box-shadow:0 0 12px 2px rgba(94,234,212,.95),0 0 5px #fff;border:1px solid rgba(255,255,255,.75)}
 
 /* time runner (kept from v3) floats top-left of the deck; readout sits bottom-right */
 .deck-vinyl .ndl-time{position:absolute;top:2%;left:3%;display:flex;flex-direction:column;line-height:1.1;z-index:7;
