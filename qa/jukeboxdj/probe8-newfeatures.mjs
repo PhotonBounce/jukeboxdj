@@ -87,22 +87,23 @@ await page.waitForTimeout(300);
 ok("stopDjScript clears the running flag", await page.evaluate(() => window.__JB.djScript.running === false));
 await page.evaluate(() => window.__JB.stopAll());
 
-/* ── 3 · needle / position extremes (NaN guard) ── */
-const needle = await page.evaluate(async () => {
+/* ── 3 · tonearm / position extremes (NaN guard) ── */
+const arm = await page.evaluate(async () => {
   const jb = window.__JB, d = jb.decks.A;
   if (!d.track) return { skip: true };
-  d.seek(0); await new Promise((r) => setTimeout(r, 80));
-  const l0 = document.querySelector("#deckA .needle").style.left;
-  d.seek(d.track.buffer.length - 1); await new Promise((r) => setTimeout(r, 120));
-  const l1 = document.querySelector("#deckA .needle").style.left;
+  const rot = () => { const m = (document.querySelector("#deckA .tonearm").style.transform || "").match(/rotate\(([-\d.]+)deg\)/); return m ? parseFloat(m[1]) : null; };
+  d.seek(0); await new Promise((r) => setTimeout(r, 90));
+  const a0 = rot();
+  d.seek(d.track.buffer.length - 1); await new Promise((r) => setTimeout(r, 130));
+  const a1 = rot();
   // poke a negative / overflow position, ensure the renderer clamps and survives
   d.seek(-5000); await new Promise((r) => setTimeout(r, 80));
   const finite = Number.isFinite(d.pos);
-  return { l0, l1, finite };
+  return { a0, a1, finite };
 });
-ok("needle sits near the rim at the start", needle.skip || (parseFloat(needle.l0) < 20), "l0=" + needle.l0);
-ok("needle reaches the spindle at the end", needle.skip || (parseFloat(needle.l1) > 80), "l1=" + needle.l1);
-ok("position stays finite after a negative-seek poke", needle.skip || needle.finite);
+ok("tonearm sits near the rim at the start (small angle)", arm.skip || (arm.a0 != null && arm.a0 <= 22), "a0=" + arm.a0);
+ok("tonearm swings toward the label by the end (larger angle)", arm.skip || (arm.a1 != null && arm.a1 > arm.a0), "a1=" + arm.a1);
+ok("position stays finite after a negative-seek poke", arm.skip || arm.finite);
 
 ok("no page errors across the whole probe", errors.length === 0, errors.slice(0, 3).join(" | "));
 

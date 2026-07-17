@@ -23,44 +23,53 @@ await page.goto(base + "/app.html");
 await page.waitForSelector("body.booted", { timeout: 20000 });
 await page.waitForFunction(() => window.__JB && window.__JB.library.filter((t) => t.buffer).length >= 6, null, { timeout: 60000 });
 
-/* ── 1. VINYL: big record, top-third window, needle + time runner ── */
-const vinylBox = await page.locator("#deckA .deck-vinyl").boundingBox();
-const platterBox = await page.locator("#deckA .platter").boundingBox();
-ok("deck vinyl is a clipping window", await page.evaluate(() => getComputedStyle(document.querySelector("#deckA .deck-vinyl")).overflow === "hidden"));
-ok("record is much larger than its window (only top third exposed)", platterBox.height > vinylBox.height * 1.9,
-  "platter=" + Math.round(platterBox.height) + " window=" + Math.round(vinylBox.height));
-ok("needle head present in the window", await page.locator("#deckA .needle").count() === 1);
+/* ── 1. VINYL: whole record, 3D tilt, tonearm + diamond stylus, time runner ── */
+ok("deck vinyl shows the WHOLE record (not clipped)", await page.evaluate(() => getComputedStyle(document.querySelector("#deckA .deck-vinyl")).overflow !== "hidden"));
+ok("turntable is tilted in 3D (perspective transform)", await page.evaluate(() => {
+  const t = getComputedStyle(document.querySelector("#deckA .tt3d")).transform;
+  return t && t !== "none" && (t.includes("matrix3d") || t.includes("rotateX"));
+}), await page.evaluate(() => getComputedStyle(document.querySelector("#deckA .tt3d")).transform.slice(0, 24)));
+ok("tonearm + diamond stylus present", await page.locator("#deckA .tonearm .stylus").count() === 1);
+ok("centre label carries the track name", await page.locator("#deckA .disc-label b").count() === 1);
 ok("time runner present (current + remaining)", await page.locator("#deckA .vt-cur").count() === 1 && await page.locator("#deckA .vt-rem").count() === 1);
 
-// play deck A and watch the needle ride + the runner advance
+// play deck A and watch the tonearm swing in + the runner advance
 await page.click("#btn-autoload");
 await page.waitForFunction(() => window.__JB.decks.A && window.__JB.decks.A.track && window.__JB.decks.B && window.__JB.decks.B.track);
-const leftBefore = await page.evaluate(() => document.querySelector("#deckA .needle").style.left || "8%");
+const armBefore = await page.evaluate(() => document.querySelector("#deckA .tonearm").style.transform || "");
 await page.click("#deckA .btn-play");
 await page.waitForTimeout(2500);
 const rideState = await page.evaluate(() => ({
-  left: document.querySelector("#deckA .needle").style.left,
+  arm: document.querySelector("#deckA .tonearm").style.transform,
+  label: document.querySelector("#deckA .disc-label b").textContent,
   cur: document.querySelector("#deckA .vt-cur").textContent,
   rem: document.querySelector("#deckA .vt-rem").textContent
 }));
-ok("needle moves inward as the track plays", rideState.left && rideState.left !== leftBefore, "left=" + rideState.left);
+ok("tonearm swings inward as the track plays", rideState.arm && rideState.arm !== armBefore, "arm=" + rideState.arm);
+ok("track name shown on the centre label", rideState.label && rideState.label !== "Load", "label=" + rideState.label);
 ok("current-time runner advances", /^\d+:\d\d$/.test(rideState.cur) && rideState.cur !== "0:00", "cur=" + rideState.cur);
 ok("remaining-time runner shown as negative countdown", /^-\d+:\d\d$/.test(rideState.rem), "rem=" + rideState.rem);
-// past mid-track the label flips to avoid running off the right edge
-const flip = await page.evaluate(() => {
-  const d = window.__JB.decks.A; d.seek(Math.floor(d.track.buffer.length * 0.8));
-  return new Promise((r) => setTimeout(() => r(document.querySelector("#deckA .needle").classList.contains("flip")), 300));
-});
-ok("time-runner flips to the left past mid-track", flip);
 
-/* ── 2. compact EQ sliders (~20% footprint) ── */
-const eq = await page.evaluate(() => {
-  const g = getComputedStyle(document.querySelector("#deckA .deck-eq"));
-  const row = document.querySelector("#deckA .deck-eq .sl");
-  return { display: g.display, rowH: row.getBoundingClientRect().height };
+/* ── 2. rotary KNOBS (pitch / bass / mid / treble / filter / volume) ── */
+ok("six knobs per deck (pitch + 3-band EQ + filter + volume)", await page.locator("#deckA .deck-knobs .knob").count() === 6);
+const knob = await page.evaluate(async () => {
+  const jb = window.__JB;
+  const k = document.querySelector('#deckA .knob input[data-band="lo"]').closest(".knob");
+  const dial = k.querySelector(".dial");
+  const before = dial.style.getPropertyValue("--rot");
+  // drag the BASS knob up (raise it) via the real pointer handlers
+  const b = k.getBoundingClientRect();
+  const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  k.dispatchEvent(new PointerEvent("pointerdown", { clientX: cx, clientY: cy, bubbles: true }));
+  await new Promise((r) => setTimeout(r, 30));
+  window.dispatchEvent(new PointerEvent("pointermove", { clientX: cx, clientY: cy - 60, bubbles: true }));
+  await new Promise((r) => setTimeout(r, 30));
+  window.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  const inp = k.querySelector("input");
+  return { before, after: dial.style.getPropertyValue("--rot"), val: +inp.value, eqLo: jb.decks.A.eqLo.gain.value };
 });
-ok("EQ sliders laid out as a compact grid", eq.display === "grid", eq.display);
-ok("slider rows are short (shrunken)", eq.rowH <= 22, "rowH=" + Math.round(eq.rowH));
+ok("dragging a knob turns its dial", knob.after && knob.after !== knob.before, JSON.stringify({ a: knob.before, b: knob.after }));
+ok("turning the BASS knob changes the audio (EQ gain follows)", knob.val > 0 && Math.abs(knob.eqLo - knob.val) < 0.01, JSON.stringify({ val: knob.val, gain: knob.eqLo }));
 
 /* ── 3. two auto-mix modes present ── */
 ok("Song Auto-Mix button present", await page.locator("#btn-mix-song").count() === 1);

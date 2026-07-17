@@ -99,9 +99,18 @@ await page.dispatchEvent("#deckA .platter", "pointerup", { pointerId: 5, isPrima
 await page.waitForTimeout(200);
 ok("vinyl scratches backwards in APK conditions", await page.evaluate(() => window.__JB.decks.A.pos) < p0);
 
-// needle + time runner (the v11 redesign) render and advance
-const runner = await page.evaluate(() => ({ left: document.querySelector("#deckA .needle").style.left, cur: document.querySelector("#deckA .vt-cur").textContent }));
-ok("needle + time runner live in APK conditions", !!runner.left && /^\d+:\d\d$/.test(runner.cur), JSON.stringify(runner));
+// 3D tilted turntable: tonearm + diamond stylus + time runner render in APK
+const runner = await page.evaluate(() => ({
+  tilt: getComputedStyle(document.querySelector("#deckA .tt3d")).transform,
+  arm: document.querySelector("#deckA .tonearm").style.transform,
+  stylus: document.querySelectorAll("#deckA .tonearm .stylus").length,
+  cur: document.querySelector("#deckA .vt-cur").textContent
+}));
+ok("tilted deck + tonearm/stylus + time runner live in APK conditions",
+  runner.tilt && runner.tilt !== "none" && runner.stylus === 1 && /^\d+:\d\d$/.test(runner.cur), JSON.stringify({ arm: runner.arm, cur: runner.cur }));
+// knobs replace sliders — six per deck, and turning one changes the audio
+const knobOk = await page.evaluate(() => document.querySelectorAll("#deckA .deck-knobs .knob").length === 6);
+ok("six rotary knobs per deck in APK conditions", knobOk);
 
 // Song Auto-Mix: blends the two decks
 await page.evaluate(() => window.__JB.stopAll());

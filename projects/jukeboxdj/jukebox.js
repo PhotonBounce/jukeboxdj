@@ -924,6 +924,63 @@ function setupRandomLoad () {
     if (btn) btn.addEventListener("click", async () => { await ensureAudio(); await loadRandomToDeck(id); });
   });
 }
+
+/* ── rotary knobs (pitch / bass / mid / treble / filter / volume) ──
+   The <input type=range> keeps all the audio logic; a circular dial visualises
+   the value and a vertical pointer-drag turns the knob (dispatching the input's
+   existing 'input' event so the audio graph updates exactly as before). */
+function knobRot (inp) {
+  const min = +inp.min, max = +inp.max, range = (max - min) || 1;
+  const frac = Math.max(0, Math.min(1, (+inp.value - min) / range));
+  return -135 + frac * 270;                     // −135°…+135° sweep
+}
+function updateKnobDials (el) {
+  if (!el.knobs) return;
+  el.knobs.forEach((k) => {
+    const inp = $("input", k); if (!inp) return;
+    const r = knobRot(inp);
+    if (k._lastRot !== r) { k._lastRot = r; const dial = $(".dial", k); if (dial) dial.style.setProperty("--rot", r.toFixed(1) + "deg"); }
+  });
+}
+function setupKnobs () {
+  document.querySelectorAll(".knob").forEach((k) => {
+    const inp = k.querySelector("input"); if (!inp) return;
+    const min = +inp.min, max = +inp.max, step = +inp.step || 1, range = (max - min) || 1;
+    const dial = k.querySelector(".dial");
+    const paint = () => { if (dial) dial.style.setProperty("--rot", knobRot(inp).toFixed(1) + "deg"); k._lastRot = knobRot(inp); };
+    paint();
+    inp.addEventListener("input", paint);
+    let dragging = false, startY = 0, startV = 0;
+    const move = (e) => {
+      if (!dragging) return;
+      let v = startV + ((startY - e.clientY) / 130) * range;   // ~130px = full sweep
+      v = Math.max(min, Math.min(max, Math.round(v / step) * step));
+      if (String(v) !== inp.value) { inp.value = String(v); inp.dispatchEvent(new Event("input", { bubbles: true })); }
+    };
+    const up = () => { dragging = false; k.classList.remove("hot"); window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    k.addEventListener("pointerdown", async (e) => {
+      await ensureAudio();
+      dragging = true; startY = e.clientY; startV = +inp.value; k.classList.add("hot"); e.preventDefault();
+      window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+    });
+    // double-tap recenters EQ / pitch / filter (leaves volume alone)
+    k.addEventListener("dblclick", () => {
+      if (inp.dataset.band === "vol") return;
+      inp.value = (min < 0 && max > 0) ? "0" : inp.min;
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
+}
+/* tabbed shelf — one panel (Jukebox / Prompt / Styles / FX) visible at a time */
+function setupShelfTabs () {
+  const tabs = Array.from(document.querySelectorAll(".shelf-tab"));
+  if (!tabs.length) return;
+  tabs.forEach((t) => t.addEventListener("click", () => {
+    const id = t.dataset.panel;
+    tabs.forEach((x) => x.classList.toggle("on", x === t));
+    document.querySelectorAll(".shelf-panel").forEach((p) => p.classList.toggle("on", p.id === id));
+  }));
+}
 function setupShare () {
   const btn = $("#btn-share");
   if (!btn) return;
@@ -1111,9 +1168,10 @@ function deckEls (id) {
     platter: $(".platter", root),
     disc: $(".disc", root),
     label: $(".disc-label", root),
-    needle: $(".needle", root),
+    arm: $(".tonearm", root),
     vtCur: $(".vt-cur", root),
     vtRem: $(".vt-rem", root),
+    knobs: $$(".knob", root),
     play: $(".btn-play", root),
     cue: $(".btn-cue", root),
     sync: $(".btn-sync", root),
@@ -1258,9 +1316,10 @@ function updatePitchLabel (id) {
   const v = Number(el.pitch.value) / 10;
   const lbl = (v > 0 ? "+" : "") + v.toFixed(1) + "%";
   if (el.pitchVal) el.pitchVal.textContent = lbl;
-  // show the live pitch on the slider's label ("PITCH +4.0%")
-  const span = el.pitch.closest(".sl") && el.pitch.closest(".sl").querySelector("span");
-  if (span) span.textContent = "PITCH " + lbl;
+  // show the live pitch on the knob's caption ("PITCH +4.0%")
+  const knob = el.pitch.closest(".knob");
+  const cap = knob && knob.querySelector("b");
+  if (cap) cap.textContent = (Number(el.pitch.value) === 0) ? "PITCH" : "PITCH " + lbl;
 }
 
 ui.deckPlayChanged = (id) => {
@@ -1614,12 +1673,11 @@ function tick () {
       const angle = (d.posSec() / VINYL_SEC_PER_REV) * 360;
       el.disc.style.transform = "rotate(" + (angle % 360) + "deg)";
       const frac = Math.max(0, Math.min(1, d.pos / d.track.buffer.length));
-      // Needle rides from the outer rim (start) toward the spindle (end) across
-      // the exposed top third of the record. left: 8%→92% tracks progress.
-      if (el.needle) {
-        el.needle.style.left = (8 + frac * 84).toFixed(2) + "%";
-        el.needle.classList.toggle("flip", frac > 0.5);
-      }
+      // tonearm + diamond stylus swing inward from the rim toward the label as
+      // the track plays (18° at the start → ~46° near the end).
+      if (el.arm) el.arm.style.transform = "rotate(" + (18 + frac * 28).toFixed(2) + "deg)";
+      // knob dials reflect their live values (also catches AI-driven EQ moves)
+      updateKnobDials(el);
       // time runner: only rewrite the DOM when the whole-second value actually
       // changes (≈1×/s), not every animation frame — avoids needless per-frame
       // string allocation + layout churn.
@@ -1695,6 +1753,8 @@ async function boot () {
   setupMixNotes();
   setupFullAuto();
   setupMixModes();
+  setupKnobs();
+  setupShelfTabs();
   setupRandomLoad();
   setupShare();
   setupHotcues();

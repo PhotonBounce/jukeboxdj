@@ -49,25 +49,28 @@
           <button class="btn-rand" title="Load a random record">🎲</button>
         </div>
         <div class="deck-vinyl" title="Grab the record to scratch">
-          <div class="platter">
-            <div class="strobe" aria-hidden="true"></div>
-            <div class="disc">
-              <div class="grooves"></div>
-              <div class="disc-label" style="--c:#A78BFA"><b>Load</b><i></i></div>
-              <div class="spindle"></div>
+          <div class="tt3d">
+            <div class="platter">
+              <div class="strobe" aria-hidden="true"></div>
+              <div class="disc">
+                <div class="grooves"></div>
+                <div class="disc-label" style="--c:#A78BFA"><b>Load</b><i></i></div>
+                <div class="spindle"></div>
+              </div>
             </div>
+            <div class="tonearm" aria-hidden="true"><span class="arm"></span><span class="head"><span class="stylus"></span></span></div>
           </div>
-          <div class="needle" aria-hidden="true"><i class="ndl-time"><b class="vt-cur">0:00</b><b class="vt-rem">-0:00</b></i></div>
+          <i class="ndl-time"><b class="vt-cur">0:00</b><b class="vt-rem">-0:00</b></i>
           <span class="deck-readout"><span class="bpm-val">—</span><small>BPM</small><span class="time-val">0:00 / 0:00</span></span>
         </div>
         <canvas class="wave" aria-label="Deck A waveform — click to seek"></canvas>
-        <div class="deck-eq">
-          <label class="sl"><span>PITCH</span><input class="pitch" type="range" min="-80" max="80" value="0" step="1" aria-label="Pitch A"></label>
-          <label class="sl"><span>BASS</span><input class="eq-slider" data-band="lo" type="range" min="-22" max="12" value="0" step="1" aria-label="Bass A"></label>
-          <label class="sl"><span>MID</span><input class="eq-slider" data-band="mid" type="range" min="-22" max="12" value="0" step="1" aria-label="Mid A"></label>
-          <label class="sl"><span>TREBLE</span><input class="eq-slider" data-band="hi" type="range" min="-22" max="12" value="0" step="1" aria-label="Treble A"></label>
-          <label class="sl"><span>FILTER</span><input class="eq-slider" data-band="filter" type="range" min="-1" max="1" value="0" step="0.02" aria-label="Filter A"></label>
-          <label class="sl"><span>VOLUME</span><input class="chan-fader" data-band="vol" type="range" min="0" max="100" value="100" aria-label="Volume A"></label>
+        <div class="deck-knobs">
+          <label class="knob"><input class="pitch" type="range" min="-80" max="80" value="0" step="1" aria-label="Pitch A"><span class="dial"></span><b>PITCH</b></label>
+          <label class="knob"><input class="eq-slider" data-band="lo" type="range" min="-22" max="12" value="0" step="1" aria-label="Bass A"><span class="dial"></span><b>BASS</b></label>
+          <label class="knob"><input class="eq-slider" data-band="mid" type="range" min="-22" max="12" value="0" step="1" aria-label="Mid A"><span class="dial"></span><b>MID</b></label>
+          <label class="knob"><input class="eq-slider" data-band="hi" type="range" min="-22" max="12" value="0" step="1" aria-label="Treble A"><span class="dial"></span><b>TREB</b></label>
+          <label class="knob"><input class="eq-slider" data-band="filter" type="range" min="-1" max="1" value="0" step="0.02" aria-label="Filter A"><span class="dial"></span><b>FILT</b></label>
+          <label class="knob"><input class="chan-fader" data-band="vol" type="range" min="0" max="100" value="100" aria-label="Volume A"><span class="dial"></span><b>VOL</b></label>
         </div>
         <div class="deck-transport">
           <button class="btn-cue">CUE</button>
@@ -98,25 +101,28 @@
           <button class="btn-rand" title="Load a random record">🎲</button>
         </div>
         <div class="deck-vinyl" title="Grab the record to scratch">
-          <div class="platter">
-            <div class="strobe" aria-hidden="true"></div>
-            <div class="disc">
-              <div class="grooves"></div>
-              <div class="disc-label" style="--c:#7DD3FC"><b>Load</b><i></i></div>
-              <div class="spindle"></div>
+          <div class="tt3d">
+            <div class="platter">
+              <div class="strobe" aria-hidden="true"></div>
+              <div class="disc">
+                <div class="grooves"></div>
+                <div class="disc-label" style="--c:#7DD3FC"><b>Load</b><i></i></div>
+                <div class="spindle"></div>
+              </div>
             </div>
+            <div class="tonearm" aria-hidden="true"><span class="arm"></span><span class="head"><span class="stylus"></span></span></div>
           </div>
-          <div class="needle" aria-hidden="true"><i class="ndl-time"><b class="vt-cur">0:00</b><b class="vt-rem">-0:00</b></i></div>
+          <i class="ndl-time"><b class="vt-cur">0:00</b><b class="vt-rem">-0:00</b></i>
           <span class="deck-readout"><span class="bpm-val">—</span><small>BPM</small><span class="time-val">0:00 / 0:00</span></span>
         </div>
         <canvas class="wave" aria-label="Deck B waveform — click to seek"></canvas>
-        <div class="deck-eq">
-          <label class="sl"><span>PITCH</span><input class="pitch" type="range" min="-80" max="80" value="0" step="1" aria-label="Pitch B"></label>
-          <label class="sl"><span>BASS</span><input class="eq-slider" data-band="lo" type="range" min="-22" max="12" value="0" step="1" aria-label="Bass B"></label>
-          <label class="sl"><span>MID</span><input class="eq-slider" data-band="mid" type="range" min="-22" max="12" value="0" step="1" aria-label="Mid B"></label>
-          <label class="sl"><span>TREBLE</span><input class="eq-slider" data-band="hi" type="range" min="-22" max="12" value="0" step="1" aria-label="Treble B"></label>
-          <label class="sl"><span>FILTER</span><input class="eq-slider" data-band="filter" type="range" min="-1" max="1" value="0" step="0.02" aria-label="Filter B"></label>
-          <label class="sl"><span>VOLUME</span><input class="chan-fader" data-band="vol" type="range" min="0" max="100" value="100" aria-label="Volume B"></label>
+        <div class="deck-knobs">
+          <label class="knob"><input class="pitch" type="range" min="-80" max="80" value="0" step="1" aria-label="Pitch B"><span class="dial"></span><b>PITCH</b></label>
+          <label class="knob"><input class="eq-slider" data-band="lo" type="range" min="-22" max="12" value="0" step="1" aria-label="Bass B"><span class="dial"></span><b>BASS</b></label>
+          <label class="knob"><input class="eq-slider" data-band="mid" type="range" min="-22" max="12" value="0" step="1" aria-label="Mid B"><span class="dial"></span><b>MID</b></label>
+          <label class="knob"><input class="eq-slider" data-band="hi" type="range" min="-22" max="12" value="0" step="1" aria-label="Treble B"><span class="dial"></span><b>TREB</b></label>
+          <label class="knob"><input class="eq-slider" data-band="filter" type="range" min="-1" max="1" value="0" step="0.02" aria-label="Filter B"><span class="dial"></span><b>FILT</b></label>
+          <label class="knob"><input class="chan-fader" data-band="vol" type="range" min="0" max="100" value="100" aria-label="Volume B"><span class="dial"></span><b>VOL</b></label>
         </div>
         <div class="deck-transport">
           <button class="btn-cue">CUE</button>
@@ -144,81 +150,80 @@
     </div>
   </section>
 
-  <!-- ═══════════ LIBRARY (right under the decks) ═══════════ -->
-  <section id="library" aria-label="Jukebox record library">
-    <div class="lib-head">
-      <span class="lib-title">◉ THE JUKEBOX</span>
-      <span id="lib-status">Warming up the press…</span>
-      <button id="btn-add-music" class="chip">＋ Add music</button>
-      <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" multiple hidden>
+  <!-- ═══════════ SET BAR — always-on transport for the whole set ═══════════ -->
+  <section id="setbar" aria-label="Set controls">
+    <button id="btn-full-auto" aria-pressed="false" title="Hands-free AI DJ — loads &amp; blends the library for you">
+      <span class="fa-icon" aria-hidden="true">🎧</span>
+      <span class="fa-text"><b>FULL AUTO</b><small>hands-free AI DJ</small></span>
+      <span class="fa-state">OFF</span>
+    </button>
+    <div class="fa-interval" role="group" aria-label="Remix interval">
+      <span class="fa-int-label">every</span>
+      <button class="fa-int" data-sec="5">5s</button>
+      <button class="fa-int" data-sec="10">10s</button>
+      <button class="fa-int" data-sec="30">30s</button>
+      <button class="fa-int" data-sec="60">1m</button>
+      <button class="fa-int" data-sec="120">2m</button>
+      <button class="fa-int" data-sec="180">3m</button>
+      <button class="fa-int" data-sec="0">song</button>
     </div>
-    <div id="lib-list"></div>
+    <button id="btn-mix-song" class="am-mode" title="Beat-match &amp; blend the two records on the decks (key: M)">
+      <span class="amm-ic" aria-hidden="true">🎚</span><span class="amm-txt"><b>SONG</b><small>blend decks</small></span>
+    </button>
+    <button id="btn-playlist-auto" class="am-mode" aria-pressed="false" title="Non-stop AI set — DJs your whole library, pre-cueing &amp; mixing each record">
+      <span class="amm-ic" aria-hidden="true">📻</span><span class="amm-txt"><b>PLAYLIST</b><small>non-stop set</small></span><span class="pa-state">OFF</span>
+    </button>
+    <button id="btn-automix" title="AI blends the two decks once (key: M)">🤖 Once</button>
+    <label class="am-rec"><input type="checkbox" id="automix-rec"> Rec mix</label>
+    <button id="btn-record-session" class="am-session" title="Record the whole session to a file">
+      <span class="rs-dot"></span><span class="rs-label">Rec Session</span>
+    </button>
+    <button id="btn-stop-all" title="Stop everything — decks, Auto-Mix and Full Auto">⏹ STOP</button>
+    <span id="automix-status">Load A &amp; B, then let the AI beat-match and blend them.</span>
   </section>
 
-  <!-- ═══════════ PANEL 2 · CONTROLS (FULL AUTO + Auto-Mix + Scratch FX) ═══════════ -->
-  <section id="controls-panel" aria-label="Auto-Mix and effects">
-    <div class="ctl-top">
-      <button id="btn-full-auto" aria-pressed="false" title="Hands-free AI DJ — loads &amp; blends the library for you">
-        <span class="fa-icon" aria-hidden="true">🎧</span>
-        <span class="fa-text"><b>FULL AUTO</b><small>hands-free AI DJ</small></span>
-        <span class="fa-state">OFF</span>
-      </button>
-      <div class="fa-interval" role="group" aria-label="Remix interval">
-        <span class="fa-int-label">every</span>
-        <button class="fa-int" data-sec="5">5s</button>
-        <button class="fa-int" data-sec="10">10s</button>
-        <button class="fa-int" data-sec="30">30s</button>
-        <button class="fa-int" data-sec="60">1m</button>
-        <button class="fa-int" data-sec="120">2m</button>
-        <button class="fa-int" data-sec="180">3m</button>
-        <button class="fa-int" data-sec="0">song</button>
+  <!-- ═══════════ SHELF — tabbed, fixed-height (jukebox / prompt / styles / FX) ═══════════ -->
+  <section id="shelf" aria-label="Library, prompt, styles and effects">
+    <div id="shelf-tabs" role="tablist">
+      <button class="shelf-tab on" data-panel="library" role="tab">◉ Jukebox</button>
+      <button class="shelf-tab" data-panel="djchat" role="tab">🎙 Prompt</button>
+      <button class="shelf-tab" data-panel="automix-grid" role="tab">🎛 Styles</button>
+      <button class="shelf-tab" data-panel="fx-bar" role="tab">💿 FX</button>
+    </div>
+    <div id="shelf-body">
+
+      <section id="library" class="shelf-panel on" aria-label="Jukebox record library">
+        <div class="lib-head">
+          <span class="lib-title">◉ THE JUKEBOX</span>
+          <span id="lib-status">Warming up the press…</span>
+          <button id="btn-add-music" class="chip">＋ Add music</button>
+          <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" multiple hidden>
+        </div>
+        <div id="lib-list"></div>
+      </section>
+
+      <div id="djchat" class="shelf-panel" aria-label="Prompt-controlled DJ">
+        <div class="djchat-head">🎙 <b>DJ by prompt</b> <small>— tell it a set in plain English</small></div>
+        <div class="djchat-row">
+          <input id="djchat-input" type="text" autocomplete="off"
+            placeholder="e.g. mix first 13s of track 1, then start track 3 at second 50, play track 5 fully…">
+          <button id="djchat-send">▶ Play set</button>
+        </div>
+        <div class="djchat-exs">
+          <button class="djchat-ex" data-ex="mix first 13 seconds of track 1 and start on 50th second of track 3, then play track 5 fully and at end gently mix in track 22 at second 33">try the example</button>
+          <button class="djchat-ex" data-ex="play track 2 fully then gently mix in track 4">play 2 then blend 4</button>
+          <button class="djchat-ex" data-ex="mix first 20 seconds of track 1 then start track 6 at second 15">quick 20s intro</button>
+        </div>
+        <div id="djchat-log" aria-live="polite"></div>
       </div>
-      <button id="btn-stop-all" title="Stop everything — decks, Auto-Mix and Full Auto">⏹ STOP ALL</button>
-    </div>
 
-    <!-- TWO auto-mix modes: Song (the two decks) vs Playlist (the whole library) -->
-    <div class="am-modes" role="group" aria-label="Auto-mix mode">
-      <button id="btn-mix-song" title="Beat-match &amp; blend the two records on the decks (key: M)">
-        <span class="amm-ic" aria-hidden="true">🎚</span>
-        <span class="amm-txt"><b>SONG AUTO-MIX</b><small>blend the two decks</small></span>
-      </button>
-      <button id="btn-playlist-auto" aria-pressed="false" title="Non-stop AI set — DJs your whole library, pre-cueing &amp; mixing each record">
-        <span class="amm-ic" aria-hidden="true">📻</span>
-        <span class="amm-txt"><b>PLAYLIST AUTO-MIX</b><small>non-stop set from your library</small></span>
-        <span class="pa-state">OFF</span>
-      </button>
-    </div>
+      <div id="automix-grid" class="shelf-panel" aria-label="Auto-mix styles"></div>
 
-    <div class="ctl-actions">
-      <button id="btn-automix" title="AI blends the two decks once (key: M)">🤖 Auto-Mix once</button>
-      <label class="am-rec"><input type="checkbox" id="automix-rec"> Record the mix</label>
-      <button id="btn-record-session" class="am-session" title="Record the whole session to a file">
-        <span class="rs-dot"></span><span class="rs-label">Record Session</span>
-      </button>
-      <span id="automix-status">Load A &amp; B, then let the AI beat-match and blend them.</span>
-    </div>
-
-    <!-- prompt-controlled DJ: type a plain-English set and it performs it -->
-    <div id="djchat" aria-label="Prompt-controlled DJ">
-      <div class="djchat-head">🎙 <b>DJ by prompt</b> <small>— tell it a set in plain English</small></div>
-      <div class="djchat-row">
-        <input id="djchat-input" type="text" autocomplete="off"
-          placeholder="e.g. mix first 13s of track 1, then start track 3 at second 50, play track 5 fully…">
-        <button id="djchat-send">▶ Play set</button>
+      <div id="fx-bar" class="shelf-panel" aria-label="Scratch FX pads">
+        <span class="fx-title">💿 SCRATCH FX <small>keys 1–0</small></span>
+        <div id="fx-pads"></div>
       </div>
-      <div class="djchat-exs">
-        <button class="djchat-ex" data-ex="mix first 13 seconds of track 1 and start on 50th second of track 3, then play track 5 fully and at end gently mix in track 22 at second 33">try the example</button>
-        <button class="djchat-ex" data-ex="play track 2 fully then gently mix in track 4">play 2 then blend 4</button>
-        <button class="djchat-ex" data-ex="mix first 20 seconds of track 1 then start track 6 at second 15">quick 20s intro</button>
-      </div>
-      <div id="djchat-log" aria-live="polite"></div>
-    </div>
 
-    <div id="automix-grid" aria-label="Auto-mix styles"></div>
-
-    <div id="fx-bar" aria-label="Scratch FX pads">
-      <span class="fx-title">💿 SCRATCH FX <small>keys 1–0</small></span>
-      <div id="fx-pads"></div>
     </div>
   </section>
 

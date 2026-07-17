@@ -25,16 +25,17 @@ await page.click("#deckA .btn-play");
 await page.waitForTimeout(800);
 const platter = page.locator("#deckA .platter");
 const box = await platter.boundingBox();
-// Only the TOP THIRD of the record is exposed (the rest slides behind the deck),
-// so scratch along the visible top arc rather than the (clipped) centre.
-const cx = box.x + box.width / 2, cy = box.y + box.height / 2, r = box.width * 0.42;
+// The record is a 3D-tilted (foreshortened) ellipse now, so keep the drag radius
+// inside the SHORTER (vertical) axis and sweep a small arc near the centre so
+// every point lands on real platter pixels for the real-mouse hit-test.
+const cx = box.x + box.width / 2, cy = box.y + box.height / 2, r = Math.min(box.width, box.height) * 0.28;
 const posBefore = await page.evaluate(() => window.__JB.decks.A.pos);
-// sweep counter-clockwise across the exposed top of the record (backwards)
-let a0 = -0.9;
+// sweep counter-clockwise across the upper arc of the record (backwards)
+let a0 = -0.7;
 await page.mouse.move(cx + r * Math.cos(a0), cy + r * Math.sin(a0));
 await page.mouse.down();
 for (let i = 1; i <= 22; i++) {
-  const a = a0 - i * 0.06; // stays on the top arc (visible band), sweeps CCW
+  const a = a0 - i * 0.07; // CCW sweep, stays within the tilted ellipse
   await page.mouse.move(cx + r * Math.cos(a), cy + r * Math.sin(a));
   await page.waitForTimeout(16);
 }
