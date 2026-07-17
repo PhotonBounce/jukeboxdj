@@ -30,10 +30,13 @@ async function bootConsole (page) {
   await page.waitForFunction(() => { const d = window.__JB.decks; return d.A && d.A.track && d.B.track; }, null, { timeout: 15000 });
   await page.click("#deckA .btn-play");
   await page.click("#deckB .btn-play");
-  // dial in some EQ/filter so the mixer looks alive
+  // turn a couple of knobs so the decks look "worked" for the shot
   await page.evaluate(() => {
-    const set = (id, deg) => { const e = document.querySelector(id); if (e) e.style.setProperty("--rot", deg + "deg"); };
-    set("#eq-hi-a", 40); set("#eq-lo-a", 70); set("#filter-b", -55); set("#echo-b", 45);
+    const bump = (deck, band, val) => {
+      const inp = document.querySelector(`#deck${deck} .knob input[data-band="${band}"]`);
+      if (inp) { inp.value = String(val); inp.dispatchEvent(new Event("input", { bubbles: true })); }
+    };
+    bump("A", "lo", 8); bump("A", "hi", -6); bump("B", "filter", 0.4); bump("B", "mid", 5);
   });
   await page.waitForTimeout(2200);
 }
@@ -57,27 +60,29 @@ console.log("play-icon-512.png");
   const phoneCtx = await browser.newContext({ userAgent: APP_UA, viewport: { width: 540, height: 1080 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const phone = await phoneCtx.newPage();
   await bootConsole(phone);
-  // 1 · decks (big vinyl + needle + time runner)
+  const shelfTab = (p, name) => p.evaluate((n) => { const t = [...document.querySelectorAll(".shelf-tab")].find((x) => x.dataset.panel === n); if (t) t.click(); }, name);
+  // 1 · the whole rig — 3D tilted decks + knobs, Jukebox shelf
+  await shelfTab(phone, "library");
   await phone.screenshot({ path: path.join(OUT, "phone-1-decks.png") });
-  // 2 · a deck mid-scratch (scroll deck A into view, flag scratching)
-  await phone.evaluate(() => { document.querySelector("#deckA").classList.add("scratching"); document.querySelector("#deckA").scrollIntoView(); });
+  // 2 · a deck mid-scratch (flag scratching on the tilted record)
+  await phone.evaluate(() => document.querySelector("#deckA").classList.add("scratching"));
   await phone.waitForTimeout(400);
   await phone.screenshot({ path: path.join(OUT, "phone-2-scratch.png") });
   await phone.evaluate(() => document.querySelector("#deckA").classList.remove("scratching"));
-  // 3 · the jukebox library
-  await phone.evaluate(() => document.querySelector("#library").scrollIntoView());
+  // 3 · the jukebox library (Styles tab shows the AI-DJ mixing styles)
+  await shelfTab(phone, "automix-grid");
   await phone.waitForTimeout(400);
-  await phone.screenshot({ path: path.join(OUT, "phone-3-jukebox.png") });
-  // 4 · the auto-mix modes + DJ-by-prompt controls (Song vs Playlist + prompt set)
+  await phone.screenshot({ path: path.join(OUT, "phone-3-styles.png") });
+  // 4 · DJ-by-prompt — type a plain-English set
+  await shelfTab(phone, "djchat");
   await phone.evaluate(() => {
     const inp = document.querySelector("#djchat-input");
     if (inp) inp.value = "mix first 15s of track 1, then start track 3 at second 50, then gently mix in track 6";
-    const cp = document.querySelector("#controls-panel"); if (cp) cp.scrollIntoView();
   });
   await phone.waitForTimeout(500);
-  await phone.screenshot({ path: path.join(OUT, "phone-4-automix.png") });
+  await phone.screenshot({ path: path.join(OUT, "phone-4-prompt.png") });
   await phoneCtx.close();
-  console.log("phone-1-decks / phone-2-scratch / phone-3-jukebox / phone-4-automix (1080×2160)");
+  console.log("phone-1-decks / phone-2-scratch / phone-3-styles / phone-4-prompt (1080×2160)");
 }
 
 /* ── 4 · 7" tablet 1920×1200 landscape (DSF 1) ── */
