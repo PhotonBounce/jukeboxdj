@@ -26,19 +26,23 @@ Two real turntables in your pocket. Scratch the vinyl, mix, loop and record.
 ```
 JukeboxDJ is a real DJ rig in your pocket — two working turntables you can actually scratch, a full mixer, and a jukebox of tracks ready to spin. No account, no ads, works fully offline.
 
-Grab the record and the sound follows your hand: scratches, spinbacks and reverse are driven by a real vinyl engine, not a fake animation. Let go and the platter spins back up like real wax.
+Grab the record and the sound follows your hand: scratches, spinbacks and reverse are driven by a real vinyl engine, not a fake animation. Each deck shows a big spinning record with a needle that rides the groove and a live time readout, so you always know exactly where you are in the track. Let go and the platter spins back up like real wax.
 
 WHAT YOU CAN DO
-• Two turntables — spinning records with pitch faders, live BPM, cue and one-tap Sync
+• Two turntables — big spinning records with a live needle + current/remaining time, pitch faders, real-time BPM, cue and one-tap Sync
 • Scratch for real — drag the vinyl to scratch, nudge, rip it backwards, drop it on the beat
-• AI Auto-Mix — tap a style and the AI beat-matches and blends both decks: 10 hands-on techniques plus 10 fully-autonomous "AI DJ" modes that mix for you
+• Two auto-mix modes — Song Auto-Mix beat-matches and blends the two decks; Playlist Auto-Mix DJs your whole library non-stop, silently pre-cueing and beat-matching the next record and crossfading on its own
+• DJ by prompt — type a set in plain English ("mix the first 15 seconds of track 1, then start track 3 at 0:50, then gently mix in track 6") and JukeboxDJ performs it on the decks
+• AI Auto-Mix styles — 10 hands-on techniques plus 10 fully-autonomous "AI DJ" modes that mix for you
+• Hot cues — set up to 4 instant jump points per deck and fire them on the fly
+• Key-aware (harmonic) mixing — every record's musical key is detected so the auto-mixer blends tracks that sound good together
 • Scratch FX pads — 10 instant vinyl scratches (baby, chirp, transform, spinback and more) on tap or keys 1–0
-• Full mixer — crossfader, channel faders, 3-band EQ with kills, and a sweepable filter per deck
-• A living console — the mixer shifts colour and floats musical notes in time with the beat
+• Full mixer — crossfader, channel faders, bass/mid/treble EQ and a sweepable filter per deck, all as big thumb-friendly sliders
+• A living console — the whole rig shifts colour and floats musical notes in time with the beat
 • Beat loops & echo — beat-locked 1/2/4/8 loops and a tempo-synced echo send
 • The Jukebox — six original tracks (house, boom bap, trap, techno, breaks, synthwave) pressed on your device
-• Add your own music — drop in your MP3s and JukeboxDJ auto-detects the BPM
-• Record your set — capture the whole mix and save it as a file
+• Add your own music — drop in your MP3s, JukeboxDJ auto-detects the BPM, and your tracks are saved for next time
+• Record your set — capture the whole mix and save or share it as a file
 • Waveform strips for needle-drops, VU meters, a master limiter — a proper booth
 
 PRO INCLUDED — FREE IN THE APP

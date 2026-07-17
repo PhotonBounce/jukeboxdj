@@ -16,6 +16,9 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: EXE, args: ["--autoplay-policy=no-user-gesture-required", "--no-sandbox"] });
 const { srv, base } = await serve();
+// Capture screenshots as the REAL Android app (JukeboxDJApp UA): Pro is included,
+// so NO payment / crypto UI ever appears — required for a Play-safe listing.
+const APP_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36 JukeboxDJApp";
 
 /* boot the app on a page, load both decks, start playing */
 async function bootConsole (page) {
@@ -51,9 +54,10 @@ console.log("play-icon-512.png");
 
 /* ── 3 · phone screenshots 1080×2160 (portrait, DSF 2 → render 540×1080) ── */
 {
-  const phone = await browser.newPage({ viewport: { width: 540, height: 1080 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const phoneCtx = await browser.newContext({ userAgent: APP_UA, viewport: { width: 540, height: 1080 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const phone = await phoneCtx.newPage();
   await bootConsole(phone);
-  // 1 · decks
+  // 1 · decks (big vinyl + needle + time runner)
   await phone.screenshot({ path: path.join(OUT, "phone-1-decks.png") });
   // 2 · a deck mid-scratch (scroll deck A into view, flag scratching)
   await phone.evaluate(() => { document.querySelector("#deckA").classList.add("scratching"); document.querySelector("#deckA").scrollIntoView(); });
@@ -64,30 +68,35 @@ console.log("play-icon-512.png");
   await phone.evaluate(() => document.querySelector("#library").scrollIntoView());
   await phone.waitForTimeout(400);
   await phone.screenshot({ path: path.join(OUT, "phone-3-jukebox.png") });
-  // 4 · Pro panel (included-free state via app UA would hide crypto, so show the web offer)
-  await phone.evaluate(() => { window.scrollTo(0, 0); window.JBPro.openPanel(); });
-  await phone.waitForSelector(".pro-card", { timeout: 5000 });
-  await phone.waitForTimeout(400);
-  await phone.screenshot({ path: path.join(OUT, "phone-4-pro.png") });
-  await phone.close();
-  console.log("phone-1-decks / phone-2-scratch / phone-3-jukebox / phone-4-pro (1080×2160)");
+  // 4 · the auto-mix modes + DJ-by-prompt controls (Song vs Playlist + prompt set)
+  await phone.evaluate(() => {
+    const inp = document.querySelector("#djchat-input");
+    if (inp) inp.value = "mix first 15s of track 1, then start track 3 at second 50, then gently mix in track 6";
+    const cp = document.querySelector("#controls-panel"); if (cp) cp.scrollIntoView();
+  });
+  await phone.waitForTimeout(500);
+  await phone.screenshot({ path: path.join(OUT, "phone-4-automix.png") });
+  await phoneCtx.close();
+  console.log("phone-1-decks / phone-2-scratch / phone-3-jukebox / phone-4-automix (1080×2160)");
 }
 
 /* ── 4 · 7" tablet 1920×1200 landscape (DSF 1) ── */
 {
-  const t7 = await browser.newPage({ viewport: { width: 1920, height: 1200 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const t7ctx = await browser.newContext({ userAgent: APP_UA, viewport: { width: 1920, height: 1200 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const t7 = await t7ctx.newPage();
   await bootConsole(t7);
   await t7.screenshot({ path: path.join(OUT, "tablet7-1-console.png") });
   await t7.evaluate(() => document.querySelector("#library").scrollIntoView());
   await t7.waitForTimeout(400);
   await t7.screenshot({ path: path.join(OUT, "tablet7-2-jukebox.png") });
-  await t7.close();
+  await t7ctx.close();
   console.log("tablet7-1-console / tablet7-2-jukebox (1920×1200)");
 }
 
 /* ── 5 · 10" tablet 2560×1600 landscape (render 1280×800 @ DSF 2) ── */
 {
-  const t10 = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const t10ctx = await browser.newContext({ userAgent: APP_UA, viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const t10 = await t10ctx.newPage();
   await bootConsole(t10);
   await t10.screenshot({ path: path.join(OUT, "tablet10-1-console.png") });
   // mixer close-up with the recorder running
@@ -95,7 +104,7 @@ console.log("play-icon-512.png");
   await t10.waitForTimeout(900);
   await t10.screenshot({ path: path.join(OUT, "tablet10-2-mixer.png") });
   await t10.click("#btn-rec");
-  await t10.close();
+  await t10ctx.close();
   console.log("tablet10-1-console / tablet10-2-mixer (2560×1600)");
 }
 
