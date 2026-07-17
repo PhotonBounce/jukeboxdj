@@ -1,0 +1,11 @@
+# Android / Gradle build outputs and local config — never committed.
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+*.keystore
+# The web app is bundled into assets/www by CI at build time.
+app/src/main/assets/www/*
+!app/src/main/assets/www/README.txt

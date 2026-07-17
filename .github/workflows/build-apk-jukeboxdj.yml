@@ -1,0 +1,175 @@
+name: 8 · Build Android APK (JukeboxDJ)
+
+# Wraps the JukeboxDJ web app (projects/jukeboxdj) into a signed Android APK + Play AAB
+# using a native WebView shell (android/jukeboxdj). The web assets are copied into
+# the app's assets/www at build time, so the APK runs fully offline — the
+# records are synthesized on-device and Pro is included (nothing is sold in-app).
+#
+# Signing: set repo secrets JUKEBOXDJ_ANDROID_KEYSTORE_B64 / JUKEBOXDJ_ANDROID_KEYSTORE_PASSWORD /
+# JUKEBOXDJ_ANDROID_KEY_ALIAS / JUKEBOXDJ_ANDROID_KEY_PASSWORD for a stable identity (the
+# JUKEBOXDJ_ prefix namespaces them from other apps' signing secrets in this repo).
+# Without them the job signs with an ephemeral keystore so the sideload artifact is
+# still installable (Play uploads, though, require a stable upload key — see PUBLISH.md).
+#
+# On main, the signed APK is uploaded to /public_html/jukeboxdj/jukeboxdj.apk
+# (upload-only) so the microsite's "Download the Android app" button serves a real
+# file. The AAB is published only as a build artifact for the manual Play upload.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "projects/jukeboxdj/**"
+      - "android/jukeboxdj/**"
+      - ".github/workflows/build-apk-jukeboxdj.yml"
+
+concurrency:
+  group: jukeboxdj-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept SDK licenses & install packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools" >/dev/null
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Bundle web app into the APK
+        run: |
+          set -euo pipefail
+          DEST=android/jukeboxdj/app/src/main/assets/www
+          rm -rf "$DEST" && mkdir -p "$DEST"
+          cp -R projects/jukeboxdj/. "$DEST"/
+          rm -f "$DEST/README.txt"          # placeholder, not needed in the bundle
+          echo "Bundled files:" && ls "$DEST"
+
+      - name: Build release APK + AAB (unsigned)
+        working-directory: android/jukeboxdj
+        run: gradle --no-daemon assembleRelease bundleRelease
+
+      - name: Resolve signing keystore
+        id: ks
+        env:
+          KS_B64: ${{ secrets.JUKEBOXDJ_ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.JUKEBOXDJ_ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.JUKEBOXDJ_ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.JUKEBOXDJ_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          STORE="$RUNNER_TEMP/jukeboxdj.keystore"
+          if [ -n "${KS_B64:-}" ]; then
+            echo "$KS_B64" | base64 -d > "$STORE"
+            echo "store=$STORE"        >> "$GITHUB_OUTPUT"
+            echo "storepass=$KS_PASS"  >> "$GITHUB_OUTPUT"
+            echo "alias=$KS_ALIAS"     >> "$GITHUB_OUTPUT"
+            echo "keypass=$KEY_PASS"   >> "$GITHUB_OUTPUT"
+            echo "Using provided release keystore."
+          else
+            keytool -genkeypair -v -keystore "$STORE" \
+              -storepass jukeboxdjpass -keypass jukeboxdjpass -alias jukeboxdj \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=JukeboxDJ, OU=Photon Bounce, O=Photon Bounce, C=US"
+            echo "store=$STORE"        >> "$GITHUB_OUTPUT"
+            echo "storepass=jukeboxdjpass" >> "$GITHUB_OUTPUT"
+            echo "alias=jukeboxdj"        >> "$GITHUB_OUTPUT"
+            echo "keypass=jukeboxdjpass"  >> "$GITHUB_OUTPUT"
+            echo "::warning::No ANDROID_KEYSTORE_B64 secret set — signed with an ephemeral keystore. Set the ANDROID_* secrets for a stable signing identity (required for Google Play updates)."
+          fi
+
+      - name: Zipalign & sign APK
+        run: |
+          set -euo pipefail
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          UNSIGNED=android/jukeboxdj/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/zipalign" -p -f 4 "$UNSIGNED" jukeboxdj-aligned.apk
+          "$BT/apksigner" sign \
+            --ks "${{ steps.ks.outputs.store }}" \
+            --ks-pass pass:"${{ steps.ks.outputs.storepass }}" \
+            --ks-key-alias "${{ steps.ks.outputs.alias }}" \
+            --key-pass pass:"${{ steps.ks.outputs.keypass }}" \
+            --out jukeboxdj.apk jukeboxdj-aligned.apk
+          "$BT/apksigner" verify --verbose jukeboxdj.apk
+          ls -la jukeboxdj.apk
+
+      - name: Sign AAB (Play upload bundle)
+        run: |
+          set -euo pipefail
+          AAB=android/jukeboxdj/app/build/outputs/bundle/release/app-release.aab
+          # AABs are signed with the upload key via jarsigner (JAR/v1). Play re-signs
+          # for distribution when Play App Signing is enabled.
+          jarsigner -keystore "${{ steps.ks.outputs.store }}" \
+            -storepass "${{ steps.ks.outputs.storepass }}" \
+            -keypass "${{ steps.ks.outputs.keypass }}" \
+            -signedjar jukeboxdj-release.aab "$AAB" "${{ steps.ks.outputs.alias }}"
+          jarsigner -verify jukeboxdj-release.aab && echo "AAB signature verified."
+          ls -la jukeboxdj-release.aab
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jukeboxdj-apk
+          path: jukeboxdj.apk
+          if-no-files-found: error
+
+      - name: Upload AAB artifact (for Google Play upload)
+        uses: actions/upload-artifact@v4
+        with:
+          name: jukeboxdj-aab
+          path: jukeboxdj-release.aab
+          if-no-files-found: error
+
+      # R8 mapping — upload this to Play Console alongside the AAB so crash/ANR
+      # stacks are de-obfuscated (resolves the "no deobfuscation file" warning).
+      - name: Upload R8 mapping (deobfuscation file)
+        uses: actions/upload-artifact@v4
+        with:
+          name: jukeboxdj-mapping
+          path: android/jukeboxdj/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: warn
+
+      - name: Publish APK to live site (FTP, upload-only)
+        if: github.ref == 'refs/heads/main'
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL || 'ftp' }}
+          FTP_PORT: ${{ vars.FTP_PORT || '21' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FTP_SERVER:-}" ]; then
+            echo "No FTP secrets configured — skipping publish (artifact is still available above)."
+            exit 0
+          fi
+          sudo apt-get update && sudo apt-get install -y lftp
+          OPTS="set ftp:ssl-allow true; set ssl:verify-certificate no; set ftp:ssl-protect-data true; set net:timeout 25; set net:max-retries 2; set cmd:fail-exit yes;"
+          # Upload just the APK next to the microsite (deploy.yml already mirrors the
+          # web files). Upload-only — never deletes the sibling web assets. The
+          # `mkdir -f -p` guards the very first deploy, when the deploy.yml mirror
+          # that creates /public_html/jukeboxdj/ may not have run yet (put -O does not
+          # create the target dir, and would fail with FTP 553).
+          echo "::group::APK  ->  /public_html/jukeboxdj/jukeboxdj.apk"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
+            -e "$OPTS mkdir -f -p /public_html/jukeboxdj/; put -O /public_html/jukeboxdj/ jukeboxdj.apk; bye"
+          echo "::endgroup::"
+          echo "Published jukeboxdj.apk to /public_html/jukeboxdj/"

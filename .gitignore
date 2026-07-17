@@ -1,0 +1,6 @@
+node_modules/
+.gradle/
+android/**/build/
+qa/**/live-shots/
+*.log
+.DS_Store

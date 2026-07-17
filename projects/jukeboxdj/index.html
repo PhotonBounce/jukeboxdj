@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>JukeboxDJ — Two Real Turntables In Your Browser</title>
+<meta name="description" content="JukeboxDJ is a working DJ rig in your browser: grab the vinyl and scratch it, beat-match with pitch and sync, mix on a real crossfader with 3-band EQ, loop, echo, and record your set. No install, no account, no uploads.">
+<link rel="icon" type="image/png" href="assets/icon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#07050F">
+<meta property="og:title" content="JukeboxDJ — Two Real Turntables In Your Browser">
+<meta property="og:description" content="Grab the record and scratch. A full DJ console — twin decks, mixer, jukebox library, recording — running live on Web Audio.">
+<meta property="og:image" content="https://www.photon-bounce.com/jukeboxdj/assets/og.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.photon-bounce.com/jukeboxdj/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.photon-bounce.com/jukeboxdj/assets/og.png">
+<style>
+:root{
+  --bg-top:#07050F; --bg-mid:#0D0B22; --bg-bot:#160D2B;
+  --card:#131128; --border:#2A2A4A; --border-lt:#3A3763;
+  --iris:#A78BFA; --iris-lt:#C4B5FD; --teal:#7DD3FC; --aurora:#5EEAD4;
+  --gold:#F5C842; --rose:#FB7185;
+  --text:#F8FAFC; --muted:#9CA3CC; --faint:#6B6D8F;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(ellipse 90% 40% at 20% -5%,rgba(167,139,250,.18),transparent 60%),
+    radial-gradient(ellipse 90% 40% at 80% -5%,rgba(125,211,252,.15),transparent 60%),
+    linear-gradient(180deg,var(--bg-top),var(--bg-mid) 55%,var(--bg-bot));
+  background-attachment:fixed;color:var(--text);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+  overflow-x:hidden}
+a{color:var(--iris-lt);text-decoration:none}
+a:hover{text-decoration:underline}
+img{max-width:100%;display:block}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+
+/* nav */
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
+.brand{display:flex;align-items:center;gap:11px;font-weight:900;font-size:21px;letter-spacing:.03em;color:var(--text)}
+.brand img{width:40px;height:40px;border-radius:11px;box-shadow:0 4px 24px rgba(245,200,66,.35)}
+.brand i{font-style:normal;background:linear-gradient(135deg,var(--iris-lt),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+nav .links{display:flex;align-items:center;gap:22px}
+nav .links a{color:var(--muted);font-size:14px;font-weight:600}
+nav .links a:hover{color:var(--iris-lt);text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:13px 26px;border-radius:999px;font-weight:800;font-size:15px;
+  transition:all .2s;border:1px solid transparent}
+.btn-primary{background:linear-gradient(135deg,var(--iris),var(--teal));color:#0B0B1E;box-shadow:0 8px 30px rgba(167,139,250,.4)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(125,211,252,.5);text-decoration:none}
+.btn-ghost{border-color:var(--border-lt);color:var(--iris-lt)}
+.btn-ghost:hover{background:rgba(167,139,250,.1);text-decoration:none}
+nav .btn{padding:10px 20px;font-size:14px}
+
+/* hero */
+header{padding:56px 0 30px;display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.22em;color:var(--gold);
+  border:1px solid rgba(245,200,66,.35);background:rgba(245,200,66,.07);padding:7px 14px;border-radius:999px;margin-bottom:20px}
+h1{font-size:clamp(38px,5.4vw,60px);line-height:1.06;font-weight:900;letter-spacing:-.01em}
+h1 em{font-style:normal;background:linear-gradient(135deg,#fff,var(--iris-lt) 45%,var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);font-size:18px;margin:20px 0 30px;max-width:34em}
+.sub b{color:var(--text)}
+.cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.cta-note{color:var(--faint);font-size:13px;margin-top:14px}
+.stats{display:flex;gap:26px;margin-top:34px;flex-wrap:wrap}
+.stat b{display:block;font-size:24px;font-weight:900;color:var(--aurora)}
+.stat span{color:var(--faint);font-size:12.5px;letter-spacing:.04em}
+
+/* hero turntable art */
+.hero-art{position:relative;aspect-ratio:1;max-width:460px;margin-left:auto}
+.hero-glow{position:absolute;inset:-12%;background:radial-gradient(circle,rgba(167,139,250,.24),transparent 62%);filter:blur(8px)}
+.tt{position:absolute;inset:0;border-radius:26px;background:linear-gradient(160deg,#1B1834,#0E0C1F);border:1px solid var(--border-lt);
+  box-shadow:0 34px 80px rgba(0,0,0,.6)}
+.tt-disc{position:absolute;inset:7% 12% 7% 6%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,#0E0D18 0 100%);box-shadow:0 10px 30px rgba(0,0,0,.7);animation:heroSpin 4s linear infinite}
+.tt-disc::before{content:"";position:absolute;inset:0;border-radius:50%;
+  background:repeating-radial-gradient(circle at 50% 50%,#0D0C16 0 3px,#1C1A2A 3px 6px)}
+.tt-disc::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 200deg,transparent 0 18%,rgba(255,255,255,.12) 25%,transparent 34%,transparent 55%,rgba(255,255,255,.07) 66%,transparent 76%)}
+.tt-label{position:absolute;inset:32%;border-radius:50%;background:radial-gradient(circle,#FFDE6B 0 30%,#F5A623 32% 100%);
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(245,200,66,.45)}
+.tt-label b{font-size:clamp(11px,1.6vw,15px);font-weight:900;color:#3A2B05;letter-spacing:.06em;transform:rotate(-12deg)}
+.tt-spindle{position:absolute;left:50%;top:50%;width:6%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle,#EEE 0 30%,#666 40% 100%);z-index:2}
+.tt-arm{position:absolute;right:3%;top:4%;width:30%;height:62%;transform:rotate(16deg);transform-origin:80% 10%;animation:armSway 7s ease-in-out infinite}
+.tt-arm .base{position:absolute;right:6%;top:0;width:34%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#3A3763,#191730 70%);border:1px solid var(--border-lt)}
+.tt-arm .rod{position:absolute;right:20%;top:12%;width:7%;height:76%;border-radius:4px;background:linear-gradient(90deg,#B9BDDE,#5E6188)}
+.tt-arm .head{position:absolute;right:15%;bottom:0;width:17%;height:11%;border-radius:3px;background:linear-gradient(135deg,var(--iris-lt),var(--teal));box-shadow:0 0 12px rgba(125,211,252,.7)}
+@keyframes heroSpin{to{transform:rotate(360deg)}}
+@keyframes armSway{0%,100%{transform:rotate(15deg)}50%{transform:rotate(18deg)}}
+.eq-float{position:absolute;left:8%;bottom:6%;display:flex;gap:5px;align-items:flex-end;height:11%}
+.eq-float i{width:9px;border-radius:4px;background:linear-gradient(180deg,var(--teal),var(--iris));animation:eqB 1s ease-in-out infinite}
+.eq-float i:nth-child(1){height:45%;animation-delay:-.7s}.eq-float i:nth-child(2){height:90%;animation-delay:-.3s}
+.eq-float i:nth-child(3){height:60%;animation-delay:-.5s}.eq-float i:nth-child(4){height:100%;animation-delay:-.1s}
+.eq-float i:nth-child(5){height:70%;animation-delay:-.85s}
+@keyframes eqB{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+.eq-float i{transform-origin:bottom}
+
+/* sections */
+section{padding:52px 0}
+h2{font-size:clamp(26px,3.4vw,36px);font-weight:900;letter-spacing:-.01em;margin-bottom:10px}
+h2 em{font-style:normal;background:linear-gradient(135deg,var(--iris-lt),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--muted);max-width:44em;font-size:16.5px}
+
+/* live demo band */
+.demo-band{margin-top:26px;border-radius:22px;overflow:hidden;border:1px solid var(--border-lt);
+  box-shadow:0 30px 70px rgba(0,0,0,.55), 0 0 60px rgba(167,139,250,.12);position:relative}
+.demo-band img{width:100%}
+.demo-band a.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(7,5,15,0);transition:background .25s}
+.demo-band a.overlay:hover{background:rgba(7,5,15,.45);text-decoration:none}
+.demo-band a.overlay span{opacity:0;transform:translateY(8px);transition:all .25s;
+  background:linear-gradient(135deg,var(--iris),var(--teal));color:#0B0B1E;font-weight:900;padding:16px 34px;border-radius:999px;font-size:17px;
+  box-shadow:0 14px 44px rgba(125,211,252,.55)}
+.demo-band a.overlay:hover span{opacity:1;transform:none}
+
+/* features */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px}
+.card{background:linear-gradient(180deg,var(--card),#0E0C1F);border:1px solid var(--border);border-radius:16px;padding:22px;
+  transition:all .25s}
+.card:hover{transform:translateY(-4px);border-color:var(--border-lt);box-shadow:0 18px 40px rgba(0,0,0,.45), 0 0 30px rgba(167,139,250,.12)}
+.card .ico{font-size:26px;margin-bottom:12px;display:block}
+.card h3{font-size:17px;font-weight:800;margin-bottom:7px}
+.card p{color:var(--muted);font-size:14px}
+
+/* gallery */
+.gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:30px}
+.shot{border-radius:16px;overflow:hidden;border:1px solid var(--border);background:var(--card);transition:all .25s;position:relative}
+.shot:hover{transform:translateY(-4px);box-shadow:0 20px 46px rgba(0,0,0,.5)}
+.shot figcaption{padding:13px 16px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--border)}
+.shot figcaption b{color:var(--text)}
+.shot.tall{grid-row:span 2}
+.shot.tall img{height:100%;object-fit:cover;object-position:top}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:30px;counter-reset:st}
+.step{position:relative;background:rgba(167,139,250,.05);border:1px solid var(--border);border-radius:14px;padding:20px 18px 16px}
+.step::before{counter-increment:st;content:counter(st);position:absolute;top:-13px;left:16px;width:26px;height:26px;border-radius:50%;
+  background:linear-gradient(135deg,var(--iris),var(--teal));color:#0B0B1E;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center}
+.step b{display:block;margin-bottom:5px;font-size:15px}
+.step p{color:var(--muted);font-size:13.5px}
+.step i{font-style:normal;border:1px solid var(--border-lt);border-radius:5px;padding:0 6px;color:var(--iris-lt);font-size:12px}
+
+/* tech strip */
+.tech{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.tech span{border:1px solid var(--border-lt);border-radius:999px;padding:8px 16px;font-size:13px;color:var(--muted)}
+.tech span b{color:var(--aurora)}
+
+/* pricing */
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:30px;max-width:840px}
+.plan{background:linear-gradient(180deg,var(--card),#0E0C1F);border:1px solid var(--border);border-radius:18px;
+  padding:26px 24px;display:flex;flex-direction:column;gap:14px}
+.plan.pro{border-color:rgba(245,200,66,.5);box-shadow:0 0 40px rgba(245,200,66,.1);position:relative}
+.plan.pro::before{content:"UNLIMITED";position:absolute;top:-11px;right:18px;font-size:10px;font-weight:900;
+  letter-spacing:.18em;background:linear-gradient(135deg,var(--gold),#FB9E4A);color:#241800;padding:5px 12px;border-radius:999px}
+.plan h3{font-size:20px;font-weight:900}
+.plan .price{font-size:30px;font-weight:900}
+.plan .price small{font-size:13px;color:var(--faint);font-weight:600}
+.plan.pro .price{color:var(--gold)}
+.plan ul{list-style:none;display:flex;flex-direction:column;gap:8px;flex:1}
+.plan li{position:relative;padding-left:22px;color:var(--muted);font-size:14px}
+.plan li::before{content:"✓";position:absolute;left:0;color:var(--aurora);font-weight:900}
+.plan.pro li::before{content:"★";color:var(--gold)}
+.plan li b{color:var(--text)}
+.plan .btn{justify-content:center}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#FB9E4A);color:#241800;box-shadow:0 8px 30px rgba(245,200,66,.35)}
+.btn-gold:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(245,200,66,.5);text-decoration:none}
+.pricing-note{color:var(--faint);font-size:13px;margin-top:16px;max-width:56em}
+.android-band{display:flex;align-items:center;gap:22px;margin-top:34px;padding:22px 26px;border-radius:18px;
+  background:linear-gradient(90deg,rgba(94,234,212,.08),rgba(125,211,252,.05));border:1px solid rgba(94,234,212,.25);flex-wrap:wrap}
+.android-band .robot{font-size:38px}
+.android-band .txt{flex:1;min-width:220px}
+.android-band .txt b{display:block;font-size:17px;margin-bottom:3px}
+.android-band .txt span{color:var(--muted);font-size:13.5px}
+@media (max-width:700px){.plans{grid-template-columns:1fr}}
+
+/* final cta */
+.finale{text-align:center;padding:70px 0 60px}
+.finale .disc-row{display:flex;justify-content:center;gap:14px;margin-bottom:26px}
+.mini-disc{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,var(--c) 0 26%,#0a0a14 28% 46%,#221f3c 48% 100%);
+  box-shadow:0 0 14px color-mix(in srgb,var(--c) 45%,transparent);animation:heroSpin 5s linear infinite}
+.mini-disc:nth-child(2n){animation-duration:3.6s}
+footer{border-top:1px solid var(--border);padding:30px 0 44px;color:var(--faint);font-size:13.5px}
+footer .frow{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+
+@media (max-width:900px){
+  header{grid-template-columns:1fr;padding-top:34px}
+  .hero-art{margin:0 auto;max-width:340px}
+  .grid{grid-template-columns:1fr 1fr}
+  .steps{grid-template-columns:1fr 1fr}
+  nav .links a:not(.btn){display:none}
+}
+@media (max-width:560px){
+  .grid,.gallery,.steps{grid-template-columns:1fr}
+  .shot.tall{grid-row:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .tt-disc,.tt-arm,.eq-float i,.mini-disc{animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <a class="brand" href="./"><img src="assets/icon.png" alt="" width="40" height="40">Jukebox<i>DJ</i></a>
+    <span class="links">
+      <a href="#features">Features</a>
+      <a href="#gallery">Screenshots</a>
+      <a href="#how">How to play</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://www.photon-bounce.com/">Photon Bounce</a>
+      <a class="btn btn-primary" href="app.html">Open the decks →</a>
+    </span>
+  </nav>
+
+  <header>
+    <div>
+      <span class="kicker">◉ LIVE IN YOUR BROWSER — NO INSTALL</span>
+      <h1>Grab the record.<br><em>Scratch it for real.</em></h1>
+      <p class="sub">JukeboxDJ puts <b>two working turntables and a real mixer</b> in your browser.
+        The vinyl spins, and when you grab it, the audio follows your hand — scratches, spinbacks,
+        reverse — with pitch faders, SYNC, a crossfader, 3-band EQ, filters, echo, beat loops and a
+        one-tap recorder for your whole set. Or hit <b>AI Auto-Mix</b> and let it blend both decks for you.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="app.html">▶ Start DJing now</a>
+        <a class="btn btn-ghost" href="#gallery">See it in action</a>
+      </div>
+      <p class="cta-note">Free · no account · your music never leaves your device</p>
+      <div class="stats">
+        <div class="stat"><b>2</b><span>REAL TURNTABLES</span></div>
+        <div class="stat"><b>10</b><span>AI MIX STYLES</span></div>
+        <div class="stat"><b>∞</b><span>YOUR OWN MP3s</span></div>
+        <div class="stat"><b>0</b><span>UPLOADS OR SIGNUPS</span></div>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="hero-glow"></div>
+      <div class="tt">
+        <div class="tt-disc">
+          <div class="tt-label"><b>JUKEBOX DJ</b></div>
+        </div>
+        <div class="tt-spindle"></div>
+        <div class="tt-arm"><span class="base"></span><span class="rod"></span><span class="head"></span></div>
+        <div class="eq-float"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+  </header>
+
+  <section id="demo" style="padding-top:10px">
+    <h2>This is the app — <em>not a mockup</em></h2>
+    <p class="lead">Every screenshot on this page is captured from the live console you're about to open:
+      twin decks mid-mix, needles down, meters moving.</p>
+    <div class="demo-band">
+      <img src="assets/shots/console.png" alt="The full JukeboxDJ console: two turntables with records loaded, mixer in the middle, jukebox library below" loading="eager">
+      <a class="overlay" href="app.html" aria-label="Open the JukeboxDJ decks"><span>▶ Open this console live</span></a>
+    </div>
+  </section>
+
+  <section id="features">
+    <h2>A full DJ rig, <em>down to the groove</em></h2>
+    <p class="lead">Under the hood is a custom vinyl engine on Web Audio: the platter has motor inertia and
+      hand friction, so everything you do to the record happens to the sound.</p>
+    <div class="grid">
+      <div class="card"><span class="ico">🤖</span><h3>AI Auto-Mix</h3><p>Load a track on each deck and let the AI DJ the transition: it beat-matches, phase-aligns the kicks, then blends them. Pick from <b>10 hands-on techniques</b> — bass swaps, filter sweeps, echo throws, loop rolls, spinbacks, double drops — or hand the whole set to one of <b>10 autonomous AI DJ modes</b>.</p></div>
+      <div class="card"><span class="ico">🖐️</span><h3>True vinyl scratching</h3><p>Grab the platter and move it — audio tracks your hand sample-accurately, backwards and forwards. Let go and the motor spins back up like real wax.</p></div>
+      <div class="card"><span class="ico">💿</span><h3>Scratch FX pads</h3><p>Ten one-tap vinyl hits — baby, chirp, transform, spinback, rewind, brake and more — synthesized live on the master bus. Fire them by pad or the number keys <b>1–0</b>.</p></div>
+      <div class="card"><span class="ico">🎚️</span><h3>Real mixer</h3><p>Equal-power crossfader, channel faders, 3-band EQ with kills, and a sweepable low-pass/high-pass filter per deck. Throw the fader with <b>Z X C</b>. The whole console shifts colour and floats notes to the beat.</p></div>
+      <div class="card"><span class="ico">🎵</span><h3>Beat-matching</h3><p>±8% pitch faders with live BPM readouts, plus one-tap SYNC that pulls a deck to its partner's tempo — learn to beat-match, or cheat gracefully.</p></div>
+      <div class="card"><span class="ico">🔁</span><h3>Loops &amp; echo</h3><p>Beat-synced 1/2/4/8 loops that lock to the record's BPM, and a tempo-synced echo send per channel for build-ups and drops.</p></div>
+      <div class="card"><span class="ico">📀</span><h3>The Jukebox</h3><p>Six original tracks — house, boom bap, trap, techno, breaks, synthwave — pressed on-device the moment you open the app. Then drop in your own MP3s; BPM is auto-detected.</p></div>
+      <div class="card"><span class="ico">⏺️</span><h3>Record your set</h3><p>One tap records the master bus — scratches, loops, echoes and all — and hands you the file. Nothing is uploaded anywhere, ever.</p></div>
+    </div>
+  </section>
+
+  <section id="gallery">
+    <h2>Straight <em>from the booth</em></h2>
+    <p class="lead">Captured from the working app in a real browser session.</p>
+    <div class="gallery">
+      <figure class="shot tall"><img src="assets/shots/mobile.png" alt="JukeboxDJ on a phone: decks stack vertically with full controls" loading="lazy"><figcaption><b>Pocket booth.</b> The whole rig reflows to one column on a phone — turntables stay scratchable by touch.</figcaption></figure>
+      <figure class="shot"><img src="assets/shots/deck.png" alt="Close-up of Deck A: spinning record, tonearm, waveform, pitch fader and VU meter" loading="lazy"><figcaption><b>The deck.</b> Waveform strip for needle-drops, pitch fader, VU meter, CUE / SYNC / beat loops.</figcaption></figure>
+      <figure class="shot"><img src="assets/shots/mixer.png" alt="The mixer mid-set: EQ knobs dialed, filter engaged, recording running" loading="lazy"><figcaption><b>The mixer.</b> EQ dialed in, filter swept, echo sent — while the recorder counts your set.</figcaption></figure>
+      <figure class="shot"><img src="assets/shots/jukebox.png" alt="The Jukebox library listing six pressed records with BPM and load buttons" loading="lazy"><figcaption><b>The Jukebox.</b> Six pressed records with BPM and length — one tap loads either deck. Add your own music too.</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2>From zero to <em>first scratch</em> in 20 seconds</h2>
+    <div class="steps">
+      <div class="step"><b>Open the decks</b><p>No install, no signup — the console boots and presses its six records on the spot.</p></div>
+      <div class="step"><b>Hit <i>⚡ Quick start</i></b><p>Two records drop onto the turntables, ready to play. Or pick your own pairing from the Jukebox.</p></div>
+      <div class="step"><b>Press play &amp; grab the vinyl</b><p>Start a deck, then hold the record to scratch. Nudge it, rip it backwards, drop it on the beat.</p></div>
+      <div class="step"><b>Mix &amp; record</b><p>Blend with the crossfader and EQ, tap <i>REC</i>, and save your mix as a file when you're done.</p></div>
+    </div>
+    <div class="tech">
+      <span><b>AudioWorklet</b> vinyl physics — sample-accurate scratching</span>
+      <span><b>Web Audio</b> mixer, EQ, FX &amp; recorder</span>
+      <span><b>PWA</b> — installable, works offline after first visit</span>
+      <span><b>Private by design</b> — audio never leaves your device</span>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <h2>A free day, then <em>keep the whole booth.</em></h2>
+    <p class="lead">Every visitor gets a <b>1-day free trial</b> of the full rig — no account, no registration.
+      After that, a one-time unlock keeps you spinning.</p>
+    <div class="plans">
+      <div class="plan">
+        <h3>Free trial</h3>
+        <div class="price">$0 <small>1 day · no signup</small></div>
+        <ul>
+          <li><b>Everything plays</b> — twin decks, scratching, slider EQ, FULL AUTO, hot cues</li>
+          <li>All the pressed records + <b>unlimited</b> of your own MP3s (saved on your device)</li>
+          <li>Record &amp; share your mixes</li>
+          <li>No account. No ads. No uploads.</li>
+        </ul>
+        <a class="btn btn-ghost" href="app.html">Start your free day →</a>
+      </div>
+      <div class="plan pro">
+        <h3>★ Pro</h3>
+        <div class="price">$6.99 <small>one-time · this device</small></div>
+        <ul>
+          <li><b>Keep the whole booth</b> after your free day</li>
+          <li><b>Unlimited</b> 256 kbps mix recording</li>
+          <li>Pay with <b>crypto, Cash App, bank wire, or check</b></li>
+          <li>Included <b>free with the Android app</b></li>
+        </ul>
+        <a class="btn btn-gold" href="app.html#pro">Unlock Pro →</a>
+      </div>
+    </div>
+    <p class="pricing-note">Pro is a one-time, per-device unlock. Pay how you like — crypto (ETH/EVM, BTC, SOL, TRON),
+      Cash App, bank wire, or check — payment details appear only when you tap that method. It's honor-based for now:
+      no accounts, no verification backend. Google Play note: the Android app never sells anything in-app — Pro simply
+      comes included.</p>
+    <div class="android-band">
+      <span class="robot" aria-hidden="true">🤖</span>
+      <span class="txt">
+        <b>JukeboxDJ for Android</b>
+        <span>The same twin decks as a native app — fully offline, Pro included. Sideload the APK straight from here.</span>
+      </span>
+      <a class="btn btn-primary" href="jukeboxdj.apk" download="JukeboxDJ.apk" type="application/vnd.android.package-archive">⬇ Download the APK</a>
+    </div>
+  </section>
+
+  <section class="finale">
+    <div class="disc-row" aria-hidden="true">
+      <span class="mini-disc" style="--c:#7DD3FC"></span>
+      <span class="mini-disc" style="--c:#F5C842"></span>
+      <span class="mini-disc" style="--c:#FB7185"></span>
+      <span class="mini-disc" style="--c:#A78BFA"></span>
+      <span class="mini-disc" style="--c:#5EEAD4"></span>
+      <span class="mini-disc" style="--c:#C4B5FD"></span>
+    </div>
+    <h2>The floor is <em>yours</em></h2>
+    <p class="lead" style="margin:0 auto 28px">Two decks are spinning up. Six records are waiting in the Jukebox.</p>
+    <a class="btn btn-primary" style="font-size:17px;padding:16px 36px" href="app.html">▶ Open JukeboxDJ</a>
+  </section>
+
+  <footer>
+    <div class="frow">
+      <span>© <span id="yr">2026</span> <a href="https://www.photon-bounce.com/">Photon Bounce</a> · JukeboxDJ</span>
+      <span><a href="app.html">Open the decks</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
+    </div>
+  </footer>
+</div>
+
+<script>
+document.getElementById("yr").textContent = new Date().getFullYear();
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+    reg.update();
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (reloaded) return; reloaded = true;
+      if (navigator.serviceWorker.controller) location.reload();
+    });
+  }).catch(function () {});
+}
+</script>
+</body>
+</html>

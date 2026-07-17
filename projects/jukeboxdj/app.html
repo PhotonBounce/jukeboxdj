@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>JukeboxDJ — Live Decks</title>
+<meta name="description" content="Two real turntables in your browser. Scratch the vinyl, mix with sliders and EQ, loop, and record your set.">
+<link rel="icon" type="image/png" href="assets/icon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#07050F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta property="og:title" content="JukeboxDJ — Live Decks">
+<meta property="og:description" content="Grab the record. Two working turntables, slider mixer, and a jukebox of tracks — right in your browser.">
+<meta property="og:image" content="https://www.photon-bounce.com/jukeboxdj/assets/og.png">
+<meta property="og:url" content="https://www.photon-bounce.com/jukeboxdj/app.html">
+<link rel="stylesheet" href="jukebox.css">
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <a id="brand" href="./" title="JukeboxDJ — by Photon Bounce">
+      <span class="brand-disc" aria-hidden="true"></span>
+      <span class="brand-txt"><b>Jukebox<i>DJ</i></b><small>by photon-bounce.com</small></span>
+    </a>
+    <div id="top-actions">
+      <button id="btn-autoload" class="chip" title="Drop the first two records on the decks">⚡ Quick start</button>
+      <button id="btn-rec" class="chip rec" title="Record the master output"><span class="rec-dot"></span><span id="rec-label">REC</span></button>
+      <a id="rec-save" class="chip save" hidden download>⬇ Save</a>
+      <button id="btn-share" class="chip share2" hidden title="Share your recorded mix">⇪ Share</button>
+      <button id="btn-pro" class="chip pro" title="Go Pro">★ GO PRO</button>
+    </div>
+  </header>
+
+  <!-- ═══════════ PANEL 1 · THE DECKS (both turntables, always side-by-side) ═══════════ -->
+  <section id="decks-panel" aria-label="Turntables and mixer">
+    <div class="decks-grid">
+
+      <!-- DECK A -->
+      <section class="deck" id="deckA" aria-label="Deck A">
+        <div class="deck-water" aria-hidden="true"></div>
+        <div class="deck-notes" aria-hidden="true"></div>
+        <div class="deck-head">
+          <span class="deck-tag">A</span>
+          <span class="deck-track">No record</span>
+          <span class="deck-key" title="Musical key · Camelot code">—</span>
+          <button class="btn-rand" title="Load a random record">🎲</button>
+        </div>
+        <div class="deck-vinyl" title="Grab the record to scratch">
+          <div class="tt3d">
+            <div class="platter">
+              <div class="strobe" aria-hidden="true"></div>
+              <div class="disc">
+                <div class="grooves"></div>
+                <div class="disc-label" style="--c:#A78BFA"><b>Load</b><i></i></div>
+                <div class="spindle"></div>
+              </div>
+            </div>
+            <div class="tonearm" aria-hidden="true"><span class="arm"></span><span class="head"><span class="stylus"></span></span></div>
+          </div>
+          <i class="ndl-time"><b class="vt-cur">0:00</b><b class="vt-rem">-0:00</b></i>
+          <span class="deck-readout"><span class="bpm-val">—</span><small>BPM</small><span class="time-val">0:00 / 0:00</span></span>
+        </div>
+        <canvas class="wave" aria-label="Deck A waveform — click to seek"></canvas>
+        <div class="deck-knobs">
+          <label class="knob"><input class="pitch" type="range" min="-80" max="80" value="0" step="1" aria-label="Pitch A"><span class="dial"></span><b>PITCH</b></label>
+          <label class="knob"><input class="eq-slider" data-band="lo" type="range" min="-22" max="12" value="0" step="1" aria-label="Bass A"><span class="dial"></span><b>BASS</b></label>
+          <label class="knob"><input class="eq-slider" data-band="mid" type="range" min="-22" max="12" value="0" step="1" aria-label="Mid A"><span class="dial"></span><b>MID</b></label>
+          <label class="knob"><input class="eq-slider" data-band="hi" type="range" min="-22" max="12" value="0" step="1" aria-label="Treble A"><span class="dial"></span><b>TREB</b></label>
+          <label class="knob"><input class="eq-slider" data-band="filter" type="range" min="-1" max="1" value="0" step="0.02" aria-label="Filter A"><span class="dial"></span><b>FILT</b></label>
+          <label class="knob"><input class="chan-fader" data-band="vol" type="range" min="0" max="100" value="100" aria-label="Volume A"><span class="dial"></span><b>VOL</b></label>
+        </div>
+        <div class="deck-transport">
+          <button class="btn-cue">CUE</button>
+          <button class="btn-play" aria-label="Play deck A">&#9654;</button>
+          <button class="btn-sync">SYNC</button>
+          <span class="loops">
+            <button class="btn-loop" data-beats="2">2</button>
+            <button class="btn-loop" data-beats="4">4</button>
+          </span>
+        </div>
+        <div class="hotcues" aria-label="Hot cues deck A">
+          <span class="hc-label">CUES</span>
+          <button class="hc-pad" data-i="0" title="Tap empty = set · tap set = jump · long-press/right-click = clear">1</button>
+          <button class="hc-pad" data-i="1">2</button>
+          <button class="hc-pad" data-i="2">3</button>
+          <button class="hc-pad" data-i="3">4</button>
+        </div>
+      </section>
+
+      <!-- DECK B -->
+      <section class="deck deck-b" id="deckB" aria-label="Deck B">
+        <div class="deck-water" aria-hidden="true"></div>
+        <div class="deck-notes" aria-hidden="true"></div>
+        <div class="deck-head">
+          <span class="deck-tag">B</span>
+          <span class="deck-track">No record</span>
+          <span class="deck-key" title="Musical key · Camelot code">—</span>
+          <button class="btn-rand" title="Load a random record">🎲</button>
+        </div>
+        <div class="deck-vinyl" title="Grab the record to scratch">
+          <div class="tt3d">
+            <div class="platter">
+              <div class="strobe" aria-hidden="true"></div>
+              <div class="disc">
+                <div class="grooves"></div>
+                <div class="disc-label" style="--c:#7DD3FC"><b>Load</b><i></i></div>
+                <div class="spindle"></div>
+              </div>
+            </div>
+            <div class="tonearm" aria-hidden="true"><span class="arm"></span><span class="head"><span class="stylus"></span></span></div>
+          </div>
+          <i class="ndl-time"><b class="vt-cur">0:00</b><b class="vt-rem">-0:00</b></i>
+          <span class="deck-readout"><span class="bpm-val">—</span><small>BPM</small><span class="time-val">0:00 / 0:00</span></span>
+        </div>
+        <canvas class="wave" aria-label="Deck B waveform — click to seek"></canvas>
+        <div class="deck-knobs">
+          <label class="knob"><input class="pitch" type="range" min="-80" max="80" value="0" step="1" aria-label="Pitch B"><span class="dial"></span><b>PITCH</b></label>
+          <label class="knob"><input class="eq-slider" data-band="lo" type="range" min="-22" max="12" value="0" step="1" aria-label="Bass B"><span class="dial"></span><b>BASS</b></label>
+          <label class="knob"><input class="eq-slider" data-band="mid" type="range" min="-22" max="12" value="0" step="1" aria-label="Mid B"><span class="dial"></span><b>MID</b></label>
+          <label class="knob"><input class="eq-slider" data-band="hi" type="range" min="-22" max="12" value="0" step="1" aria-label="Treble B"><span class="dial"></span><b>TREB</b></label>
+          <label class="knob"><input class="eq-slider" data-band="filter" type="range" min="-1" max="1" value="0" step="0.02" aria-label="Filter B"><span class="dial"></span><b>FILT</b></label>
+          <label class="knob"><input class="chan-fader" data-band="vol" type="range" min="0" max="100" value="100" aria-label="Volume B"><span class="dial"></span><b>VOL</b></label>
+        </div>
+        <div class="deck-transport">
+          <button class="btn-cue">CUE</button>
+          <button class="btn-play" aria-label="Play deck B">&#9654;</button>
+          <button class="btn-sync">SYNC</button>
+          <span class="loops">
+            <button class="btn-loop" data-beats="2">2</button>
+            <button class="btn-loop" data-beats="4">4</button>
+          </span>
+        </div>
+        <div class="hotcues" aria-label="Hot cues deck B">
+          <span class="hc-label">CUES</span>
+          <button class="hc-pad" data-i="0" title="Tap empty = set · tap set = jump · long-press/right-click = clear">1</button>
+          <button class="hc-pad" data-i="1">2</button>
+          <button class="hc-pad" data-i="2">3</button>
+          <button class="hc-pad" data-i="3">4</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- crossfader + master (replaces the old mixer panel) -->
+    <div class="mixbar">
+      <label class="sl xf"><span>A</span><input id="crossfader" type="range" min="0" max="100" value="50" aria-label="Crossfader"><span>B</span></label>
+      <label class="sl mst"><span>MASTER</span><input id="master-gain" type="range" min="0" max="100" value="80" aria-label="Master volume"></label>
+    </div>
+  </section>
+
+  <!-- ═══════════ SET BAR — always-on transport for the whole set ═══════════ -->
+  <section id="setbar" aria-label="Set controls">
+    <button id="btn-full-auto" aria-pressed="false" title="Hands-free AI DJ — loads &amp; blends the library for you">
+      <span class="fa-icon" aria-hidden="true">🎧</span>
+      <span class="fa-text"><b>FULL AUTO</b><small>hands-free AI DJ</small></span>
+      <span class="fa-state">OFF</span>
+    </button>
+    <div class="fa-interval" role="group" aria-label="Remix interval">
+      <span class="fa-int-label">every</span>
+      <button class="fa-int" data-sec="5">5s</button>
+      <button class="fa-int" data-sec="10">10s</button>
+      <button class="fa-int" data-sec="30">30s</button>
+      <button class="fa-int" data-sec="60">1m</button>
+      <button class="fa-int" data-sec="120">2m</button>
+      <button class="fa-int" data-sec="180">3m</button>
+      <button class="fa-int" data-sec="0">song</button>
+    </div>
+    <button id="btn-mix-song" class="am-mode" title="Beat-match &amp; blend the two records on the decks (key: M)">
+      <span class="amm-ic" aria-hidden="true">🎚</span><span class="amm-txt"><b>SONG</b><small>blend decks</small></span>
+    </button>
+    <button id="btn-playlist-auto" class="am-mode" aria-pressed="false" title="Non-stop AI set — DJs your whole library, pre-cueing &amp; mixing each record">
+      <span class="amm-ic" aria-hidden="true">📻</span><span class="amm-txt"><b>PLAYLIST</b><small>non-stop set</small></span><span class="pa-state">OFF</span>
+    </button>
+    <button id="btn-automix" title="AI blends the two decks once (key: M)">🤖 Once</button>
+    <label class="am-rec"><input type="checkbox" id="automix-rec"> Rec mix</label>
+    <button id="btn-record-session" class="am-session" title="Record the whole session to a file">
+      <span class="rs-dot"></span><span class="rs-label">Rec Session</span>
+    </button>
+    <button id="btn-stop-all" title="Stop everything — decks, Auto-Mix and Full Auto">⏹ STOP</button>
+    <span id="automix-status">Load A &amp; B, then let the AI beat-match and blend them.</span>
+  </section>
+
+  <!-- ═══════════ SHELF — tabbed, fixed-height (jukebox / prompt / styles / FX) ═══════════ -->
+  <section id="shelf" aria-label="Library, prompt, styles and effects">
+    <div id="shelf-tabs" role="tablist">
+      <button class="shelf-tab on" data-panel="library" role="tab">◉ Jukebox</button>
+      <button class="shelf-tab" data-panel="djchat" role="tab">🎙 Prompt</button>
+      <button class="shelf-tab" data-panel="automix-grid" role="tab">🎛 Styles</button>
+      <button class="shelf-tab" data-panel="fx-bar" role="tab">💿 FX</button>
+    </div>
+    <div id="shelf-body">
+
+      <section id="library" class="shelf-panel on" aria-label="Jukebox record library">
+        <div class="lib-head">
+          <span class="lib-title">◉ THE JUKEBOX</span>
+          <span id="lib-status">Warming up the press…</span>
+          <button id="btn-add-music" class="chip">＋ Add music</button>
+          <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" multiple hidden>
+        </div>
+        <div id="lib-list"></div>
+      </section>
+
+      <div id="djchat" class="shelf-panel" aria-label="Prompt-controlled DJ">
+        <div class="djchat-head">🎙 <b>DJ by prompt</b> <small>— tell it a set in plain English</small></div>
+        <div class="djchat-row">
+          <input id="djchat-input" type="text" autocomplete="off"
+            placeholder="e.g. mix first 13s of track 1, then start track 3 at second 50, play track 5 fully…">
+          <button id="djchat-send">▶ Play set</button>
+        </div>
+        <div class="djchat-exs">
+          <button class="djchat-ex" data-ex="mix first 13 seconds of track 1 and start on 50th second of track 3, then play track 5 fully and at end gently mix in track 22 at second 33">try the example</button>
+          <button class="djchat-ex" data-ex="play track 2 fully then gently mix in track 4">play 2 then blend 4</button>
+          <button class="djchat-ex" data-ex="mix first 20 seconds of track 1 then start track 6 at second 15">quick 20s intro</button>
+        </div>
+        <div id="djchat-log" aria-live="polite"></div>
+      </div>
+
+      <div id="automix-grid" class="shelf-panel" aria-label="Auto-mix styles"></div>
+
+      <div id="fx-bar" class="shelf-panel" aria-label="Scratch FX pads">
+        <span class="fx-title">💿 SCRATCH FX <small>keys 1–0</small></span>
+        <div id="fx-pads"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer id="help">
+    <div class="credits">
+      <a class="credit-brand" href="https://www.photon-bounce.com" target="_blank" rel="noopener">
+        <span class="brand-disc" aria-hidden="true"></span>
+        <b>Photon<i>Bounce</i></b>
+      </a>
+      <p><b>JukeboxDJ</b> is designed &amp; built by <a href="https://www.photon-bounce.com" target="_blank" rel="noopener">photon-bounce.com</a> —
+      real Web-Audio turntables, an AI DJ, and a jukebox that runs entirely on your device.</p>
+      <p class="credit-links">
+        <a href="https://www.photon-bounce.com" target="_blank" rel="noopener">photon-bounce.com</a> ·
+        <a href="./">About JukeboxDJ</a> ·
+        <a href="jukeboxdj.apk" download="JukeboxDJ.apk">Android APK</a> ·
+        <a href="privacy.html">Privacy</a> ·
+        <a href="terms.html">Terms</a>
+      </p>
+      <p class="credit-copy">© <span id="yr"></span> Photon Bounce · Made with ♪ for DJs everywhere.</p>
+    </div>
+    <p class="help-keys"><b>How to play:</b> pick a record → ⚡ Quick start → ▶ →
+      <b>grab the vinyl to scratch</b>, or hit <i>🎧 FULL AUTO</i>. Keys: <i>Q</i>/<i>P</i> play · <i>Z X C</i> crossfader · <i>M</i> auto-mix.</p>
+  </footer>
+</div>
+
+<script src="vendor/qrcode.min.js"></script>
+<script src="jukebox-automix.js"></script>
+<script src="jukebox.js"></script>
+<script src="jukebox-pro.js"></script>
+<script>
+document.getElementById("yr").textContent = new Date().getFullYear();
+// In-app = the Android WebView shell. It serves the bundle through
+// WebViewAssetLoader on https://appassets.androidplatform.net — which IS an
+// https origin, so a bare `protocol === "https:"` check would wrongly register
+// the service worker there. A worker on that origin bypasses the asset loader,
+// so its fetches fail and the decks/library/auto-mix all die on the next launch
+// ("most experiments don't work in the APK"). Never register in-app — and heal
+// any worker/caches a previous build may have left behind on this origin.
+var IN_APP = /JukeboxDJApp/.test(navigator.userAgent) ||
+             location.hostname === "appassets.androidplatform.net";
+if ("serviceWorker" in navigator) {
+  if (IN_APP) {
+    navigator.serviceWorker.getRegistrations().then(function (rs) {
+      rs.forEach(function (r) { r.unregister(); });
+    }).catch(function () {});
+    if (window.caches && caches.keys) caches.keys().then(function (ks) {
+      ks.forEach(function (k) { caches.delete(k); });
+    }).catch(function () {});
+  } else if (location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+      reg.update();
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (reloaded) return; reloaded = true;
+        if (navigator.serviceWorker.controller) location.reload();
+      });
+    }).catch(function () {});
+  }
+}
+</script>
+</body>
+</html>

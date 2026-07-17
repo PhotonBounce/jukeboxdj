@@ -1,0 +1,54 @@
+name: Deploy JukeboxDJ to live site (FTP)
+
+# Uploads projects/jukeboxdj/ -> /public_html/jukeboxdj/ on photon-bounce.com.
+# Upload-only (never --delete) so the large server-side binaries that are NOT in
+# this repo (e.g. the built APK) are never removed. Runs on push to main and can
+# be dispatched manually (dry_run previews without uploading).
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "projects/jukeboxdj/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (log what would change, upload nothing)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ftp-deploy-jukeboxdj
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Deploy projects/jukeboxdj -> /public_html/jukeboxdj/ (upload-only)
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL || 'ftp' }}
+          FTP_PORT: ${{ vars.FTP_PORT || '21' }}
+          DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FTP_SERVER:-}" ]; then
+            echo "::error::FTP secrets are not set — add FTP_SERVER / FTP_USERNAME / FTP_PASSWORD."
+            exit 1
+          fi
+          OPTS="set ftp:ssl-allow true; set ssl:verify-certificate no; set ftp:ssl-protect-data true; set net:timeout 25; set net:max-retries 2; set cmd:fail-exit yes;"
+          echo "::group::JukeboxDJ  ->  /public_html/jukeboxdj/  (upload-only)"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -p "$FTP_PORT" "$FTP_PROTOCOL://$FTP_SERVER" \
+            -e "$OPTS mirror -R --no-perms --no-symlinks --verbose $DRY projects/jukeboxdj/ /public_html/jukeboxdj/; bye"
+          echo "::endgroup::"
+          echo "Deployed projects/jukeboxdj -> /public_html/jukeboxdj/. Dry run: ${{ inputs.dry_run || false }}"

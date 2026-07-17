@@ -1,0 +1,121 @@
+# Live-site QA for the JukeboxDJ production deployment.
+# Proves what a REAL user receives from https://www.photon-bounce.com/jukeboxdj/:
+# fresh (non-server-cached) files, a booting console, working vinyl scratching —
+# and uploads screenshots of the live decks as proof.
+name: "7 · Live QA (JukeboxDJ production)"
+
+on:
+  workflow_dispatch:
+  # Also runs when the live-QA suite itself changes — and the push event forces
+  # GitHub to (re)register the workflow so manual dispatch works.
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/live-qa-jukeboxdj.yml"
+      - "qa/jukeboxdj/live.mjs"
+
+jobs:
+  live-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write   # publishes the proof screenshots to the qa-proof branch
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Wait for the deploy to land (sw.js reports the repo's version)
+        run: |
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+          WANT=$(grep -o 'jukeboxdj-v[0-9]*' projects/jukeboxdj/sw.js | head -1)
+          echo "expecting live sw.js to be $WANT"
+          for i in $(seq 1 40); do
+            LIVE=$(curl -fsS -A "$UA" "https://www.photon-bounce.com/jukeboxdj/sw.js?sync=$GITHUB_RUN_ID-$i" 2>/dev/null | grep -o 'jukeboxdj-v[0-9]*' | head -1)
+            if [ "$LIVE" = "$WANT" ]; then echo "deploy landed ($LIVE) after $i checks"; exit 0; fi
+            echo "  live=$LIVE, waiting… ($i/40)"
+            sleep 15
+          done
+          echo "deploy never reached $WANT"; exit 1
+
+      - name: Freshness + header assertions (curl)
+        run: |
+          # Runner shell is `bash -e` — disable it; exit codes are inspected
+          # via check(). No `big | grep -q` pipes (SIGPIPE) — files only.
+          set +e; set -u
+          BASE="https://www.photon-bounce.com/jukeboxdj"
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+          fetch() { curl -fsS -A "$UA" --retry 3 --retry-delay 3 --retry-all-errors "$@"; }
+          D=$(mktemp -d)
+          fail=0
+          check() { if [ "$2" -eq 0 ]; then echo "  ✓ $1"; else echo "  ✗ $1"; fail=1; fi; }
+          BUST="qa=$GITHUB_RUN_ID"
+
+          fetch -o "$D/idx.html" "$BASE/?$BUST"; check "landing reachable" $?
+          grep -q 'Two Real Turntables In Your Browser' "$D/idx.html"; check "landing is the microsite" $?
+          grep -q 'assets/shots/console.png' "$D/idx.html"; check "landing embeds the app screenshots" $?
+
+          fetch -o "$D/app.html" "$BASE/app.html?$BUST"; check "app.html reachable" $?
+          grep -q 'JukeboxDJ — Live Decks' "$D/app.html"; check "app.html is the console" $?
+
+          fetch -o "$D/jb.js" "$BASE/jukebox.js?$BUST"; check "jukebox.js reachable" $?
+          grep -q 'stale/synthetic pointer' "$D/jb.js"; check "jukebox.js is the current build (NaN-guard fix)" $?
+
+          fetch -o "$D/vw.js" "$BASE/vinyl-worklet.js?$BUST"; check "vinyl-worklet.js reachable" $?
+          grep -q 'Number.isFinite(m.v)' "$D/vw.js"; check "worklet has finite-input guards" $?
+
+          WANT=$(grep -o 'jukeboxdj-v[0-9]*' projects/jukeboxdj/sw.js | head -1)
+          # The critical UN-busted requests — what a normal browser URL gets.
+          fetch -o "$D/sw_plain.js" "$BASE/sw.js"; check "un-busted sw.js fetch ok" $?
+          grep -q "\"$WANT\"" "$D/sw_plain.js"; check "UN-busted sw.js is fresh ($WANT, no stale server cache)" $?
+          fetch -o "$D/jb_plain.js" "$BASE/jukebox.js"; check "un-busted jukebox.js fetch ok" $?
+          grep -q 'stale/synthetic pointer' "$D/jb_plain.js"; check "UN-busted jukebox.js is fresh" $?
+          fetch -I -o "$D/h_js.txt" "$BASE/jukebox.js"; check "jukebox.js HEAD ok" $?
+          grep -qi 'cache-control:.*private' "$D/h_js.txt"; check "js served Cache-Control: private (server may not cache it)" $?
+          fetch -I -o "$D/h_sw.txt" "$BASE/sw.js"; check "sw.js HEAD ok" $?
+          grep -qi 'cache-control:.*no-cache' "$D/h_sw.txt"; check "sw.js served no-cache" $?
+
+          fetch -o /dev/null "$BASE/privacy.html"; check "privacy page live" $?
+          fetch -o /dev/null "$BASE/terms.html"; check "terms page live" $?
+          fetch -o /dev/null "$BASE/manifest.webmanifest"; check "manifest live" $?
+
+          if [ "$fail" -ne 0 ]; then echo "FRESHNESS CHECKS FAILED"; exit 1; fi
+          echo "FRESHNESS CLEAN"
+
+      - name: Install QA deps + Chromium
+        working-directory: qa/jukeboxdj
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Live E2E on production (Playwright)
+        working-directory: qa/jukeboxdj
+        run: |
+          LIVE_BASE="https://www.photon-bounce.com/jukeboxdj/" SHOTS_DIR="$GITHUB_WORKSPACE/live-shots" node live.mjs
+
+      - name: Upload live screenshots (proof)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-qa-jukeboxdj-screenshots
+          path: live-shots/
+          if-no-files-found: ignore
+          retention-days: 90
+
+      # Also publish to the qa-proof branch — artifacts live on Azure blob
+      # storage, which the Claude sandbox can't reach, while git can fetch.
+      - name: Publish screenshots to qa-proof branch
+        if: always()
+        run: |
+          set -e
+          [ -d "$GITHUB_WORKSPACE/live-shots" ] || { echo "no shots"; exit 0; }
+          cd "$GITHUB_WORKSPACE"
+          cp -r live-shots /tmp/qa-shots
+          git config user.name "live-qa-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout --orphan qa-proof-jukeboxdj
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          mkdir shots && cp /tmp/qa-shots/*.png shots/
+          printf 'JukeboxDJ live-QA screenshots from run %s (%s)\n' "$GITHUB_RUN_ID" "$(date -u +%FT%TZ)" > shots/README.txt
+          git add shots
+          git commit -m "JukeboxDJ live QA screenshots — run $GITHUB_RUN_ID"
+          git push -f origin qa-proof-jukeboxdj

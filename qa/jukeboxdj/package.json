@@ -1,0 +1,8 @@
+{
+  "name": "jukeboxdj-qa",
+  "private": true,
+  "type": "module",
+  "description": "QA + screenshot generation for projects/jukeboxdj (not deployed).",
+  "scripts": { "qa": "node smoke.mjs && node audio.mjs && node ui.mjs && node landing.mjs" },
+  "dependencies": { "playwright": "1.56.1" }
+}

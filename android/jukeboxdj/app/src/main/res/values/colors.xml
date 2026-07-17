@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="jbdj_background">#07050F</color>
+    <color name="jbdj_surface">#0D0B22</color>
+    <color name="jbdj_accent">#A78BFA</color>
+</resources>
