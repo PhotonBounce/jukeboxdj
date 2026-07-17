@@ -99,15 +99,15 @@ await page.dispatchEvent("#deckA .platter", "pointerup", { pointerId: 5, isPrima
 await page.waitForTimeout(200);
 ok("vinyl scratches backwards in APK conditions", await page.evaluate(() => window.__JB.decks.A.pos) < p0);
 
-// 3D tilted turntable: tonearm + diamond stylus + time runner render in APK
+// flat 2D turntable: readable centre label + tonearm/diamond stylus + time runner
 const runner = await page.evaluate(() => ({
-  tilt: getComputedStyle(document.querySelector("#deckA .tt3d")).transform,
+  labelFs: parseFloat(getComputedStyle(document.querySelector("#deckA .disc-label b")).fontSize),
   arm: document.querySelector("#deckA .tonearm").style.transform,
   stylus: document.querySelectorAll("#deckA .tonearm .stylus").length,
   cur: document.querySelector("#deckA .vt-cur").textContent
 }));
-ok("tilted deck + tonearm/stylus + time runner live in APK conditions",
-  runner.tilt && runner.tilt !== "none" && runner.stylus === 1 && /^\d+:\d\d$/.test(runner.cur), JSON.stringify({ arm: runner.arm, cur: runner.cur }));
+ok("flat deck (readable label) + tonearm/stylus + time runner live in APK conditions",
+  runner.labelFs >= 9 && runner.stylus === 1 && /^\d+:\d\d$/.test(runner.cur), JSON.stringify({ arm: runner.arm, cur: runner.cur, fs: runner.labelFs }));
 // knobs replace sliders — six per deck, and turning one changes the audio
 const knobOk = await page.evaluate(() => document.querySelectorAll("#deckA .deck-knobs .knob").length === 6);
 ok("six rotary knobs per deck in APK conditions", knobOk);

@@ -23,12 +23,15 @@ await page.goto(base + "/app.html");
 await page.waitForSelector("body.booted", { timeout: 20000 });
 await page.waitForFunction(() => window.__JB && window.__JB.library.filter((t) => t.buffer).length >= 6, null, { timeout: 60000 });
 
-/* ── 1. VINYL: whole record, 3D tilt, tonearm + diamond stylus, time runner ── */
+/* ── 1. VINYL: whole flat 2D record, readable centre label, tonearm + stylus ── */
 ok("deck vinyl shows the WHOLE record (not clipped)", await page.evaluate(() => getComputedStyle(document.querySelector("#deckA .deck-vinyl")).overflow !== "hidden"));
-ok("turntable is tilted in 3D (perspective transform)", await page.evaluate(() => {
-  const t = getComputedStyle(document.querySelector("#deckA .tt3d")).transform;
-  return t && t !== "none" && (t.includes("matrix3d") || t.includes("rotateX"));
-}), await page.evaluate(() => getComputedStyle(document.querySelector("#deckA .tt3d")).transform.slice(0, 24)));
+const vinylGeo = await page.evaluate(() => {
+  const p = document.querySelector("#deckA .platter").getBoundingClientRect();
+  const lb = document.querySelector("#deckA .disc-label b");
+  return { ratio: p.width / p.height, labelFs: parseFloat(getComputedStyle(lb).fontSize) };
+});
+ok("record is a full round platter (flat, top-down)", Math.abs(vinylGeo.ratio - 1) < 0.06, "ratio=" + vinylGeo.ratio.toFixed(2));
+ok("centre label track name is clearly sized (≥9px)", vinylGeo.labelFs >= 9, "fs=" + vinylGeo.labelFs);
 ok("tonearm + diamond stylus present", await page.locator("#deckA .tonearm .stylus").count() === 1);
 ok("centre label carries the track name", await page.locator("#deckA .disc-label b").count() === 1);
 ok("time runner present (current + remaining)", await page.locator("#deckA .vt-cur").count() === 1 && await page.locator("#deckA .vt-rem").count() === 1);
