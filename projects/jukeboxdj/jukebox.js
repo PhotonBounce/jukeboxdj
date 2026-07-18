@@ -899,6 +899,40 @@ function djWait (ms, deckId) {
 }
 function stopDjScript () { djScript.cancel = true; djScript.running = false; document.body.classList.remove("dj-script"); }
 
+/* Manual "skip to the next song" for either auto-mix mode:
+   · Playlist mode  → advance the running queue immediately (mix in the next record).
+   · Song / Full Auto / manual → cue a fresh next record on the idle deck and hand
+     off to it, so one tap jumps the set forward without waiting for the track to end. */
+let skipping = false;
+async function skipNext () {
+  await ensureAudio();
+  if (playlist.on) { if (!playlist.mixing) await playlistAdvance(); return; }
+  if (skipping) return;
+  skipping = true;
+  try {
+    const anyPlaying = decks.A.playing || decks.B.playing;
+    const liveId = (decks.B.playing && !decks.A.playing) ? "B" : "A";
+    const cueId = liveId === "A" ? "B" : "A";
+    await loadRandomToDeck(cueId, decks[liveId].track);   // fresh, key-aware next song
+    preCue(cueId, liveId);
+    if (!anyPlaying) {
+      // nothing spinning — just drop the needle on the next record
+      if (!decks[cueId].playing) { decks[cueId].togglePlay(); ui.deckPlayChanged(cueId); }
+      setCrossfader(cueId === "A" ? 0 : 1);
+    } else if (window.JBAutoMix) {
+      setCrossfader(liveId === "A" ? 0 : 1);
+      await window.JBAutoMix.play(window.JBAutoMix.smartPick());
+      if (decks[liveId].playing) { decks[liveId].togglePlay(); ui.deckPlayChanged(liveId); }
+    } else {
+      if (!decks[cueId].playing) { decks[cueId].togglePlay(); ui.deckPlayChanged(cueId); }
+      await rampCross(liveId, cueId, 3200);
+      if (decks[liveId].playing) { decks[liveId].togglePlay(); ui.deckPlayChanged(liveId); }
+    }
+    if (window.JBToast) window.JBToast("⏭ Next song");
+  } catch (e) { /* never let a skip break the set */ }
+  skipping = false;
+}
+
 function setupMixModes () {
   const song = $("#btn-mix-song"), pl = $("#btn-playlist-auto");
   if (song) song.addEventListener("click", async () => {
@@ -910,6 +944,8 @@ function setupMixModes () {
     if (window.JBAutoMix) window.JBAutoMix.play(window.JBAutoMix.smartPick());
   });
   if (pl) pl.addEventListener("click", () => { if (playlist.on) playlistStop(); else playlistStart(); });
+  const next = $("#btn-skip-next");
+  if (next) next.addEventListener("click", () => skipNext());
   // prompt chatbot
   const send = $("#djchat-send"), input = $("#djchat-input");
   const fire = () => { const v = input ? input.value.trim() : ""; if (v) runDjScript(v); };
@@ -1720,6 +1756,7 @@ function setupKeys () {
     const k = e.key.toLowerCase();
     if (k === "q") { await ensureAudio(); if (decks.A.track) { decks.A.togglePlay(); ui.deckPlayChanged("A"); } }
     if (k === "p") { await ensureAudio(); if (decks.B.track) { decks.B.togglePlay(); ui.deckPlayChanged("B"); } }
+    if (k === "n") { await skipNext(); }
     if (k === "z" || k === "x" || k === "c") {
       await ensureAudio();
       crossPos = k === "z" ? 0 : k === "x" ? 0.5 : 1;
@@ -1770,7 +1807,7 @@ async function boot () {
     // FULL AUTO + random load + share (also handy for QA)
     setFullAuto, fullAuto, loadRandomToDeck, onDeckEnded,
     // playlist auto-mix + prompt-controlled DJ chat
-    playlist, playlistStart, playlistStop, playlistAdvance,
+    playlist, playlistStart, playlistStop, playlistAdvance, skipNext,
     parseDjScript, runDjScript, stopDjScript, djScript,
     // hot cues + harmonic key detection
     estimateKey, trackKey, keysCompatible, refreshDeckKey, refreshHotcues,

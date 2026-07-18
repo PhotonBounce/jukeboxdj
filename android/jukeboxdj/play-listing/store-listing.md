@@ -34,7 +34,7 @@ WHAT YOU CAN DO
 • Two top-down turntables — the whole record with its clear centre label + track name, a tonearm + diamond stylus, live current/remaining time, real-time BPM, cue and one-tap Sync
 • Scratch for real — drag the vinyl to scratch, nudge, rip it backwards, drop it on the beat
 • Hands-on knobs — pitch, 3-band EQ (bass/mid/treble), a sweep filter and volume as chunky rotary knobs you twist with your thumb (double-tap to recentre)
-• Two auto-mix modes — Song Auto-Mix beat-matches and blends the two decks; Playlist Auto-Mix DJs your whole library non-stop, silently pre-cueing and beat-matching the next record and crossfading on its own
+• Two auto-mix modes — Song Auto-Mix beat-matches and blends the two decks; Playlist Auto-Mix DJs your whole library non-stop, silently pre-cueing and beat-matching the next record and crossfading on its own — with a NEXT button to skip straight to the next song in the queue whenever you want
 • DJ by prompt — type a set in plain English ("mix the first 15 seconds of track 1, then start track 3 at 0:50, then gently mix in track 6") and JukeboxDJ performs it on the decks
 • AI Auto-Mix styles — 10 hands-on techniques plus 10 fully-autonomous "AI DJ" modes that mix for you
 • Hot cues — set up to 4 instant jump points per deck and fire them on the fly
