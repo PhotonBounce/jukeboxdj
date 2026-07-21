@@ -948,3 +948,68 @@ html,body{height:100%;margin:0;overflow:hidden}
   .tt3d{width:min(80%,17vh)}
   #shelf{height:clamp(92px,15vh,140px)}
 }
+
+/* ══════════════════════════ v17 — compact decks · bigger centre label · taller
+   song list · bolder + large-text-safe type ══════════════════════════════════
+   User asks: reduce the vertical space each turntable eats and pull the controls
+   up under it; make the coloured centre label (track title) much bigger even if
+   disproportionate to the record; bold + responsive text that never overlaps when
+   the phone's large-text accessibility setting is on. */
+
+/* 1 · Size the decks to their content and let the shelf GROW into the space that
+   frees up — the turntable stops hogging vertical room, the knobs/transport ride
+   up right under it, and the song list gets the room it was missing. */
+#decks-panel{flex:0 1 auto}
+.decks-grid{flex:0 1 auto;min-height:0}
+.deck-vinyl{flex:0 1 auto;min-height:0}
+
+/* 2 · Smaller turntable footprint (was min(92%,30vh)) so nothing floats in dead space. */
+.tt3d{width:min(80%,21vh)}
+
+/* 3 · BIG centre label — the whole coloured disc by the hole. Deliberately
+   disproportionate so the track title reads at a glance. */
+.tt3d .disc-label{inset:18%;padding:5%;box-shadow:0 0 0 4px rgba(0,0,0,.30),inset 0 0 14px rgba(0,0,0,.22)}
+.tt3d .disc-label b{font-size:clamp(13px,3.2vw,23px);font-weight:900;line-height:1.08;-webkit-line-clamp:3}
+.tt3d .disc-label i{font-size:clamp(9px,1.8vw,14px);font-weight:800;margin-top:3px}
+
+/* 4 · Taller, growing song list (Jukebox tab) so the list is clearly visible. */
+#shelf{flex:1 1 auto;height:auto;min-height:clamp(172px,30vh,340px)}
+
+/* 5 · Bolder, responsive, non-overlapping text everywhere. Base weight up; the
+   already-heavy labels keep their weight. Single-line labels truncate with an
+   ellipsis instead of colliding when the system font is enlarged. */
+#app{font-weight:600}
+.deck-readout,.mixbar,#lib-status,.lib-meta i,#setbar #automix-status,.hc-label,.loops::before{font-weight:700}
+.deck-knobs .knob b{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.lib-meta i{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shelf-tab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deck-head .deck-track{font-weight:800}
+/* large-text safety: let rows breathe by content instead of a fixed line, and
+   keep the coloured label’s title clamped to its disc rather than spilling out. */
+.lib-row{min-height:0}
+.tt3d .disc-label{overflow:hidden}
+
+/* phones + short screens: keep the compact record but a roomy list */
+@media (max-width:640px){
+  .tt3d{width:min(84%,16.5vh)}
+  #shelf{min-height:clamp(184px,34vh,360px)}
+  .tt3d .disc-label b{font-size:clamp(12px,4.4vw,20px)}
+}
+@media (max-height:620px){
+  .tt3d{width:min(70%,15vh)}
+  #shelf{min-height:clamp(120px,24vh,220px)}
+}
+
+/* v17.1 · song titles in the list stay fully readable — wrap to two lines
+   instead of hard-truncating, and give the name priority over the meta columns
+   on narrow phones (so bolder type never eats the title). */
+.lib-meta{min-width:0;flex:1 1 auto}
+.lib-meta b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;line-height:1.15;font-weight:800}
+@media (max-width:640px){
+  .lib-row{gap:9px;padding:9px 12px}
+  .lib-bpm{width:auto;min-width:44px}
+  .lib-dur{width:38px}
+  .lib-btns button{width:30px;height:28px}
+  .lib-vinyl{width:26px;height:26px}
+}
