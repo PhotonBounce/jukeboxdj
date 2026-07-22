@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace 'com.photonbounce.jukeboxdj'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.photonbounce.jukeboxdj"
         minSdk 26      // AudioWorklet needs a modern WebView; 26+ keeps the floor sane
-        targetSdk 35
-        versionCode 4
-        versionName "1.2.0"
+        targetSdk 36   // Android 16 — meets Google Play's target-API requirement
+        versionCode 5
+        versionName "1.3.0"
     }
 
     buildTypes {
